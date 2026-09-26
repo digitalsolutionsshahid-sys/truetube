@@ -56,8 +56,8 @@ class Job:
             progress_percent=round(self.progress_percent, 1),
             speed_str=self.speed_str,
             eta_str=self.eta_str,
-            downloaded_bytes=self.downloaded_bytes,
-            total_bytes=self.total_bytes,
+            downloaded_bytes=int(round(float(self.downloaded_bytes or 0))),
+            total_bytes=int(round(float(self.total_bytes or 0))),
             current_stage=self.current_stage,
             filename=self.filename,
             file_size_str=self.file_size_str,
@@ -158,9 +158,15 @@ class JobManager:
             if eta_str is not None:
                 job.eta_str = eta_str
             if downloaded_bytes is not None:
-                job.downloaded_bytes = downloaded_bytes
+                try:
+                    job.downloaded_bytes = int(round(float(downloaded_bytes)))
+                except (ValueError, TypeError):
+                    job.downloaded_bytes = 0
             if total_bytes is not None:
-                job.total_bytes = total_bytes
+                try:
+                    job.total_bytes = int(round(float(total_bytes)))
+                except (ValueError, TypeError):
+                    job.total_bytes = 0
             if current_stage is not None:
                 job.current_stage = current_stage
             if filename is not None:

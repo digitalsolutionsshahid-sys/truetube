@@ -1,5 +1,5 @@
 from typing import Optional, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 class AnalyzeRequest(BaseModel):
     url: str = Field(..., description="URL of the media to analyze", min_length=5)
@@ -77,6 +77,16 @@ class JobStatusResponse(BaseModel):
     eta_str: str = "--:--"
     downloaded_bytes: int = 0
     total_bytes: int = 0
+
+    @field_validator("downloaded_bytes", "total_bytes", mode="before")
+    @classmethod
+    def coerce_bytes_to_int(cls, v):
+        if v is None:
+            return 0
+        try:
+            return int(round(float(v)))
+        except (ValueError, TypeError):
+            return 0
     current_stage: str = "Queued"
     filename: str = ""
     file_size_str: str = ""

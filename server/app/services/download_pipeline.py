@@ -214,8 +214,15 @@ class DownloadPipeline:
 
             status = d.get("status")
             if status == "downloading":
-                downloaded = d.get("downloaded_bytes") or 0
-                total = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
+                try:
+                    downloaded = int(round(float(d.get("downloaded_bytes") or 0)))
+                except (ValueError, TypeError):
+                    downloaded = 0
+                try:
+                    total_raw = d.get("total_bytes") or d.get("total_bytes_estimate") or 0
+                    total = int(round(float(total_raw)))
+                except (ValueError, TypeError):
+                    total = 0
                 speed = d.get("speed") or 0.0
                 eta = d.get("eta") or 0
 

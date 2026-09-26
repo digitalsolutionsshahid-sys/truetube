@@ -218,3 +218,25 @@ def test_concurrency_limit_for_jobs():
         assert resp.status_code == 429
         assert "limit reached" in resp.json()["detail"]["error"]
 
+
+def test_float_byte_counts_validation_immunity():
+    """Verify that float estimates from yt-dlp (e.g. 30408623.999999996) do not crash Pydantic validation."""
+    req = DownloadJobRequest(url="https://www.youtube.com/watch?v=dQw4w9WgXcQ")
+    job = job_manager.create_job(req)
+
+    # Pass float byte counts as received from yt-dlp fragmented streams
+    job_manager.update_job_progress(
+        job.id,
+        status="DOWNLOADING",
+        progress_percent=45.5,
+        downloaded_bytes=1048576.75,  # float with fractional part
+        total_bytes=30408623.999999996,  # float with fractional part
+    )
+
+    resp = job.to_response()
+    assert isinstance(resp.total_bytes, int)
+    assert resp.total_bytes == 30408624
+    assert isinstance(resp.downloaded_bytes, int)
+    assert resp.downloaded_bytes == 1048577
+
+

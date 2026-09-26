@@ -113,10 +113,13 @@ export function subscribeJobProgress(
 ): () => void {
   const eventSource = new EventSource(`${API_BASE}/jobs/${jobId}/progress`);
   let isClosed = false;
+  let pollingInterval: ReturnType<typeof setInterval> | null = null;
+  let retryCount = 0;
 
   const close = () => {
     if (!isClosed) {
       isClosed = true;
+      if (pollingInterval) clearInterval(pollingInterval);
       eventSource.close();
     }
   };
@@ -125,6 +128,7 @@ export function subscribeJobProgress(
     try {
       const data: DownloadProgress = JSON.parse(event.data);
       onProgress(data);
+      retryCount = 0;
 
       if (data.status === 'COMPLETED') {
         close();
@@ -138,10 +142,37 @@ export function subscribeJobProgress(
     }
   };
 
+  const startFallbackPolling = () => {
+    if (pollingInterval || isClosed) return;
+    pollingInterval = setInterval(async () => {
+      if (isClosed) {
+        if (pollingInterval) clearInterval(pollingInterval);
+        return;
+      }
+      try {
+        const data = await getJobStatus(jobId);
+        onProgress(data);
+        if (data.status === 'COMPLETED') {
+          close();
+          onComplete(data);
+        } else if (data.status === 'FAILED' || data.status === 'CANCELLED') {
+          close();
+          onError(data.error || `Download ${data.status.toLowerCase()}`);
+        }
+      } catch {
+        retryCount++;
+        if (retryCount >= 5 && !isClosed) {
+          close();
+          onError('Lost real-time connection to server.');
+        }
+      }
+    }, 1500);
+  };
+
   eventSource.onerror = () => {
     if (isClosed) return;
 
-    // If connection drops, fallback to polling single status
+    // Check status immediately and fall back to polling if job is still active
     getJobStatus(jobId)
       .then((data) => {
         onProgress(data);
@@ -151,10 +182,15 @@ export function subscribeJobProgress(
         } else if (data.status === 'FAILED' || data.status === 'CANCELLED') {
           close();
           onError(data.error || 'Connection closed');
+        } else {
+          startFallbackPolling();
         }
       })
       .catch(() => {
-        if (!isClosed) {
+        retryCount++;
+        if (retryCount < 3) {
+          startFallbackPolling();
+        } else if (!isClosed) {
           close();
           onError('Lost real-time connection to server.');
         }

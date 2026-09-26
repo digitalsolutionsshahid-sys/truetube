@@ -64,7 +64,7 @@ concurrency_limiter = ConcurrencyLimiter(settings.MAX_CONCURRENT_JOBS)
 def get_health():
     """Returns system status, yt-dlp version, and FFmpeg detection info."""
     ffmpeg_bin = settings.FFMPEG_PATH or shutil.which("ffmpeg") or ""
-    active_count = len([j for j in job_manager._jobs.values() if j.status in ("QUEUED", "DOWNLOADING", "PROCESSING", "FINALIZING")])
+    active_count = job_manager.get_active_job_count()
     total_active = active_count + concurrency_limiter.active_count
     return HealthResponse(
         status="ok",
@@ -160,7 +160,7 @@ def create_download_job(req: DownloadJobRequest):
         )
 
     # Check concurrency limit
-    active_count = len([j for j in job_manager._jobs.values() if j.status in ("QUEUED", "DOWNLOADING", "PROCESSING", "FINALIZING")])
+    active_count = job_manager.get_active_job_count()
     if active_count >= settings.MAX_CONCURRENT_JOBS:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -201,7 +201,8 @@ async def stream_job_progress(job_id: str):
 
     async def event_generator() -> AsyncGenerator[str, None]:
         queue: asyncio.Queue = asyncio.Queue()
-        job_manager.register_listener(job_id, queue)
+        loop = asyncio.get_running_loop()
+        job_manager.register_listener(job_id, queue, loop=loop)
 
         # Yield immediate initial state
         initial_job = job_manager.get_job(job_id)
@@ -295,7 +296,4 @@ def download_completed_file(job_id: str):
         path=str(job.file_path),
         media_type=media_type,
         filename=safe_name,
-        headers={
-            "Content-Disposition": f'attachment; filename="{safe_name}"',
-        },
     )

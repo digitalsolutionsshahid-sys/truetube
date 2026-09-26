@@ -46,7 +46,7 @@ class Job:
     updated_at: float = field(default_factory=time.time)
     cancel_event: threading.Event = field(default_factory=threading.Event)
     temp_dir: Path = field(default_factory=lambda: settings.TEMP_STORAGE_PATH)
-    listeners: list[asyncio.Queue] = field(default_factory=list)
+    listeners: list[tuple[Optional[asyncio.AbstractEventLoop], asyncio.Queue]] = field(default_factory=list)
 
     def to_response(self) -> JobStatusResponse:
         download_url = f"/api/jobs/{self.id}/file" if self.status == "COMPLETED" else None
@@ -65,6 +65,31 @@ class Job:
             error=self.error,
             error_code=self.error_code,  # type: ignore
         )
+
+def safe_rmtree(path: Path):
+    """Safely delete directory handling Windows transient file locks."""
+    if not path or not path.exists():
+        return
+    for _ in range(3):
+        try:
+            shutil.rmtree(path, ignore_errors=False)
+            return
+        except Exception:
+            time.sleep(0.05)
+    shutil.rmtree(path, ignore_errors=True)
+
+def _dispatch_to_listener(loop: Optional[asyncio.AbstractEventLoop], queue: asyncio.Queue, data: dict):
+    """Safely put event data onto an asyncio queue across threads."""
+    if loop and loop.is_running():
+        try:
+            loop.call_soon_threadsafe(queue.put_nowait, data)
+        except Exception:
+            pass
+    else:
+        try:
+            queue.put_nowait(data)
+        except Exception:
+            pass
 
 class JobManager:
     def __init__(self):
@@ -93,6 +118,14 @@ class JobManager:
     def get_job(self, job_id: str) -> Optional[Job]:
         with self._lock:
             return self._jobs.get(job_id)
+
+    def get_active_job_count(self) -> int:
+        """Returns the number of active jobs across all in-progress states with thread safety."""
+        with self._lock:
+            return len([
+                j for j in self._jobs.values()
+                if j.status in ("QUEUED", "ANALYZING", "DOWNLOADING", "PROCESSING", "FINALIZING")
+            ])
 
     def update_job_progress(
         self,
@@ -144,12 +177,9 @@ class JobManager:
             data = job.to_response().model_dump()
             listeners = list(job.listeners)
 
-        # Notify any SSE queues
-        for queue in listeners:
-            try:
-                queue.put_nowait(data)
-            except Exception:
-                pass
+        # Notify any SSE queues thread-safely
+        for loop, queue in listeners:
+            _dispatch_to_listener(loop, queue, data)
 
     def cancel_job(self, job_id: str) -> bool:
         with self._lock:
@@ -169,57 +199,75 @@ class JobManager:
             temp_dir = job.temp_dir
 
         # Notify listeners
-        for queue in listeners:
-            try:
-                queue.put_nowait(data)
-            except Exception:
-                pass
+        for loop, queue in listeners:
+            _dispatch_to_listener(loop, queue, data)
 
-        # Cleanup temp directory asynchronously or safely
+        # Cleanup temp directory safely
         if temp_dir and temp_dir.exists():
-            try:
-                shutil.rmtree(temp_dir, ignore_errors=True)
-            except Exception:
-                pass
+            safe_rmtree(temp_dir)
 
         return True
 
-    def register_listener(self, job_id: str, queue: asyncio.Queue):
+    def register_listener(
+        self,
+        job_id: str,
+        queue: asyncio.Queue,
+        loop: Optional[asyncio.AbstractEventLoop] = None,
+    ):
         with self._lock:
             job = self._jobs.get(job_id)
             if job:
-                job.listeners.append(queue)
-                # Send immediate initial state
-                queue.put_nowait(job.to_response().model_dump())
+                job.listeners.append((loop, queue))
 
     def unregister_listener(self, job_id: str, queue: asyncio.Queue):
         with self._lock:
             job = self._jobs.get(job_id)
-            if job and queue in job.listeners:
-                job.listeners.remove(queue)
+            if job:
+                job.listeners = [(l, q) for (l, q) in job.listeners if q is not queue]
+
+    def clean_expired_jobs(self, ttl: Optional[int] = None) -> int:
+        """Purges in-memory expired jobs and temporary directories on disk."""
+        if ttl is None:
+            ttl = settings.FILE_EXPIRATION_SECONDS
+        now = time.time()
+        expired_ids = []
+
+        with self._lock:
+            for j_id, job in self._jobs.items():
+                if now - job.updated_at > ttl:
+                    expired_ids.append(j_id)
+
+        cleaned_count = 0
+        for j_id in expired_ids:
+            with self._lock:
+                job = self._jobs.pop(j_id, None)
+            if job and job.temp_dir and job.temp_dir.exists():
+                safe_rmtree(job.temp_dir)
+            cleaned_count += 1
+
+        # Also purge any orphan directories in TEMP_STORAGE_PATH older than ttl
+        try:
+            if settings.TEMP_STORAGE_PATH.exists():
+                for item in settings.TEMP_STORAGE_PATH.iterdir():
+                    if item.is_dir():
+                        try:
+                            mtime = item.stat().st_mtime
+                            if now - mtime > ttl:
+                                safe_rmtree(item)
+                                cleaned_count += 1
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
+        return cleaned_count
 
     def _start_cleanup_worker(self):
         """Background thread that runs periodically to remove expired job directories."""
         def cleanup_loop():
             while True:
                 time.sleep(300)  # Check every 5 minutes
-                now = time.time()
-                ttl = settings.FILE_EXPIRATION_SECONDS
-                expired_ids = []
-
-                with self._lock:
-                    for j_id, job in self._jobs.items():
-                        if now - job.updated_at > ttl:
-                            expired_ids.append(j_id)
-
-                for j_id in expired_ids:
-                    with self._lock:
-                        job = self._jobs.pop(j_id, None)
-                    if job and job.temp_dir and job.temp_dir.exists():
-                        try:
-                            shutil.rmtree(job.temp_dir, ignore_errors=True)
-                        except Exception:
-                            pass
+                self.clean_expired_jobs()
 
         t = threading.Thread(target=cleanup_loop, daemon=True, name="JobCleanupWorker")
         t.start()

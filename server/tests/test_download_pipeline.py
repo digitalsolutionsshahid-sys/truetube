@@ -106,3 +106,115 @@ def test_sse_progress_stream_handshake():
                 received = True
                 break
         assert received is True
+
+def test_download_file_with_unicode_characters():
+    """Verify that international and Unicode filenames serve cleanly without UnicodeEncodeError."""
+    req = DownloadJobRequest(
+        url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        container="mp4",
+    )
+    job = job_manager.create_job(req)
+    unicode_file = job.temp_dir / "测试视频_动画_4K.mp4"
+    unicode_file.write_bytes(b"Unicode test content for TrueTube")
+
+    job_manager.update_job_progress(
+        job.id,
+        status="COMPLETED",
+        progress_percent=100.0,
+        filename="测试视频_动画_4K.mp4",
+        file_path=unicode_file,
+        file_size_str="33 B",
+    )
+
+    resp = client.get(f"/api/jobs/{job.id}/file")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"] == "video/mp4"
+    # Content-Disposition should contain encoded or compliant filename
+    assert "attachment" in resp.headers["content-disposition"]
+    assert resp.content == b"Unicode test content for TrueTube"
+
+def test_ydl_options_format_resolution_and_audio():
+    """Verify yt-dlp format and postprocessor building across resolutions and audio extractors."""
+    from app.services.download_pipeline import download_pipeline
+
+    # 1. Shorthand resolution format
+    req1 = DownloadJobRequest(
+        url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        format_id="1080p",
+        container="mp4",
+    )
+    job1 = job_manager.create_job(req1)
+    opts1 = download_pipeline._build_ydl_opts(job1)
+    assert "height<=1080" in opts1["format"]
+    assert opts1["merge_output_format"] == "mp4"
+
+    # 2. Audio only mode
+    req2 = DownloadJobRequest(
+        url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        audio_only=True,
+        container="mp3",
+        audio_stream_id="audio_140",
+    )
+    job2 = job_manager.create_job(req2)
+    opts2 = download_pipeline._build_ydl_opts(job2)
+    assert "140" in opts2["format"]
+    pp_keys = [p["key"] for p in opts2["postprocessors"]]
+    assert "FFmpegExtractAudio" in pp_keys
+
+    # 3. Embed thumbnail with converter
+    req3 = DownloadJobRequest(
+        url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        embed_thumbnail=True,
+        container="mp4",
+    )
+    job3 = job_manager.create_job(req3)
+    opts3 = download_pipeline._build_ydl_opts(job3)
+    if settings.FFMPEG_PATH:
+        assert opts3.get("writethumbnail") is True
+        pp_keys3 = [p["key"] for p in opts3["postprocessors"]]
+        assert "FFmpegThumbnailsConvertor" in pp_keys3
+        assert "EmbedThumbnail" in pp_keys3
+
+def test_clean_expired_jobs_purges_memory_and_disk():
+    """Verify clean_expired_jobs purges expired in-memory jobs and disk orphan folders."""
+    req = DownloadJobRequest(
+        url="https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        container="mp4",
+    )
+    job = job_manager.create_job(req)
+    assert job.temp_dir.exists()
+
+    # Create dummy orphan dir in temp storage
+    orphan_dir = settings.TEMP_STORAGE_PATH / "orphan_test_dir_12345"
+    orphan_dir.mkdir(parents=True, exist_ok=True)
+    assert orphan_dir.exists()
+
+    # Artificially set job updated_at to the past
+    job.updated_at = time.time() - 7200
+
+    # Run cleanup with ttl=3600
+    cleaned = job_manager.clean_expired_jobs(ttl=3600)
+    assert cleaned >= 1
+    assert job_manager.get_job(job.id) is None
+    assert not job.temp_dir.exists()
+
+    # Clean with ttl=0 to purge orphan dir
+    job_manager.clean_expired_jobs(ttl=0)
+    assert not orphan_dir.exists()
+
+def test_concurrency_limit_for_jobs():
+    """Verify HTTP 429 when max concurrent download jobs is exceeded."""
+    from unittest.mock import patch
+
+    # Mock get_active_job_count returning MAX_CONCURRENT_JOBS
+    with patch.object(job_manager, "get_active_job_count", return_value=settings.MAX_CONCURRENT_JOBS):
+        resp = client.post(
+            "/api/jobs",
+            json={
+                "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                "container": "mp4",
+            },
+        )
+        assert resp.status_code == 429
+        assert "limit reached" in resp.json()["detail"]["error"]
+

@@ -47,6 +47,7 @@ export const App: React.FC = () => {
   // Media & Job State
   const [media, setMedia] = useState<MediaMetadata>(MOCK_MEDIA_METADATA);
   const [currentJobId, setCurrentJobId] = useState<string>('');
+  const [completedQualityLabel, setCompletedQualityLabel] = useState<string>('4K (3840x2160)');
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress>({
     status: 'DOWNLOADING',
     progress_percent: 62,
@@ -181,13 +182,25 @@ export const App: React.FC = () => {
           }));
         },
         (finalProgress) => {
+          // Resolve quality label
+          const chosenFmt = media.formats.find(
+            (f) => f.id === options.qualityId || f.format_id === options.qualityId
+          );
+          const qualityText = options.audioOnly
+            ? 'Audio'
+            : chosenFmt
+            ? chosenFmt.label
+            : options.qualityId.toUpperCase();
+
+          setCompletedQualityLabel(qualityText);
+
           // Add to recent downloads
           const newItem: RecentDownloadItem = {
             id: `rec_${Date.now()}`,
             title: media.title,
             thumbnail: media.thumbnail,
             format: options.format.toUpperCase(),
-            quality: options.audioOnly ? 'Audio' : options.qualityId.toUpperCase(),
+            quality: qualityText,
             file_size: finalProgress.file_size_str || 'Downloaded',
             timestamp: 'Just now',
             status: 'Completed',
@@ -242,6 +255,17 @@ export const App: React.FC = () => {
       document.body.removeChild(a);
     } else {
       alert('File ready for download.');
+    }
+  };
+
+  const handleRedownload = (item: RecentDownloadItem) => {
+    if (item.file_url) {
+      const a = document.createElement('a');
+      a.href = item.file_url;
+      a.download = item.title || 'download';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
   };
 
@@ -380,11 +404,8 @@ export const App: React.FC = () => {
             <RecentDownloads
               items={recentDownloads}
               onClearHistory={() => setRecentDownloads([])}
-              onRedownload={(item) => {
-                if (item.file_url) {
-                  window.open(item.file_url, '_blank');
-                }
-              }}
+              onRedownload={handleRedownload}
+              onViewAll={() => setAppState('RECENT_DOWNLOADS')}
             />
             <FeatureSections onScrollToTop={() => scrollToSection('home')} />
           </>
@@ -422,6 +443,8 @@ export const App: React.FC = () => {
             <RecentDownloads
               items={recentDownloads}
               onClearHistory={() => setRecentDownloads([])}
+              onRedownload={handleRedownload}
+              onViewAll={() => setAppState('RECENT_DOWNLOADS')}
             />
           </div>
         )}
@@ -440,14 +463,22 @@ export const App: React.FC = () => {
             progress={downloadProgress}
             onDownloadFile={handleDownloadFile}
             onDownloadAnother={handleDownloadAnother}
+            qualityLabel={completedQualityLabel}
           />
         )}
 
         {appState === 'RECENT_DOWNLOADS' && (
-          <div className="space-y-8 py-4">
+          <div className="space-y-6 py-4 max-w-5xl mx-auto px-4 animate-fadeIn">
+            <button
+              onClick={() => setAppState('IDLE')}
+              className="inline-flex items-center gap-2 text-xs sm:text-sm font-medium text-indigo-400 hover:text-indigo-300 transition-colors"
+            >
+              ← Back to Home
+            </button>
             <RecentDownloads
               items={recentDownloads}
               onClearHistory={() => setRecentDownloads([])}
+              onRedownload={handleRedownload}
             />
           </div>
         )}

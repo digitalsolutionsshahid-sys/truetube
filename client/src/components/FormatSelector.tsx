@@ -30,13 +30,24 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
   const [tab, setTab] = useState<'video' | 'audio'>('video');
   const [selectedFormat, setSelectedFormat] = useState<FormatContainer>('mp4');
   const [selectedQualityId, setSelectedQualityId] = useState<string>(
-    media.formats[0]?.id || 'best_4k'
+    media.formats.find((f) => f.is_recommended)?.id || media.formats[0]?.id || 'best_4k'
   );
   const [selectedAudioId, setSelectedAudioId] = useState<string>(
-    media.audio_streams[0]?.id || 'audio_aac'
+    media.audio_streams.find((a) => a.is_default)?.id || media.audio_streams[0]?.id || 'audio_aac'
   );
   const [selectedAudioFormat, setSelectedAudioFormat] = useState<string>('mp3');
   const [copiedLink, setCopiedLink] = useState(false);
+
+  React.useEffect(() => {
+    if (media.formats && media.formats.length > 0) {
+      const rec = media.formats.find((f) => f.is_recommended);
+      setSelectedQualityId(rec ? rec.id : media.formats[0].id);
+    }
+    if (media.audio_streams && media.audio_streams.length > 0) {
+      const defAudio = media.audio_streams.find((a) => a.is_default);
+      setSelectedAudioId(defAudio ? defAudio.id : media.audio_streams[0].id);
+    }
+  }, [media]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(media.url);
@@ -45,10 +56,12 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
   };
 
   const handleDownload = () => {
+    const chosenFormat = media.formats.find((f) => f.id === selectedQualityId);
+    const chosenAudio = media.audio_streams.find((a) => a.id === selectedAudioId);
     onStartDownload({
       format: tab === 'video' ? selectedFormat : (selectedAudioFormat as any),
-      qualityId: selectedQualityId,
-      audioStreamId: selectedAudioId,
+      qualityId: chosenFormat?.format_id || selectedQualityId,
+      audioStreamId: chosenAudio?.format_id || selectedAudioId,
       audioOnly: tab === 'audio',
     });
   };

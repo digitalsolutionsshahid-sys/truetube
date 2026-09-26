@@ -112,6 +112,14 @@ export function subscribeJobProgress(
   onError: (errorMsg: string) => void
 ): () => void {
   const eventSource = new EventSource(`${API_BASE}/jobs/${jobId}/progress`);
+  let isClosed = false;
+
+  const close = () => {
+    if (!isClosed) {
+      isClosed = true;
+      eventSource.close();
+    }
+  };
 
   eventSource.onmessage = (event) => {
     try {
@@ -119,10 +127,10 @@ export function subscribeJobProgress(
       onProgress(data);
 
       if (data.status === 'COMPLETED') {
-        eventSource.close();
+        close();
         onComplete(data);
       } else if (data.status === 'FAILED' || data.status === 'CANCELLED') {
-        eventSource.close();
+        close();
         onError(data.error || `Download ${data.status.toLowerCase()}`);
       }
     } catch (e) {
@@ -131,25 +139,29 @@ export function subscribeJobProgress(
   };
 
   eventSource.onerror = () => {
+    if (isClosed) return;
+
     // If connection drops, fallback to polling single status
     getJobStatus(jobId)
       .then((data) => {
         onProgress(data);
         if (data.status === 'COMPLETED') {
-          eventSource.close();
+          close();
           onComplete(data);
         } else if (data.status === 'FAILED' || data.status === 'CANCELLED') {
-          eventSource.close();
+          close();
           onError(data.error || 'Connection closed');
         }
       })
       .catch(() => {
-        eventSource.close();
-        onError('Lost real-time connection to server.');
+        if (!isClosed) {
+          close();
+          onError('Lost real-time connection to server.');
+        }
       });
   };
 
   return () => {
-    eventSource.close();
+    close();
   };
 }

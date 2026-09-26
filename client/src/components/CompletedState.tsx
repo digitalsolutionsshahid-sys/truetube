@@ -7,6 +7,7 @@ interface CompletedStateProps {
   progress: DownloadProgress;
   onDownloadFile: () => void;
   onDownloadAnother: () => void;
+  qualityLabel?: string;
 }
 
 export const CompletedState: React.FC<CompletedStateProps> = ({
@@ -14,6 +15,7 @@ export const CompletedState: React.FC<CompletedStateProps> = ({
   progress,
   onDownloadFile,
   onDownloadAnother,
+  qualityLabel = '4K (3840x2160)',
 }) => {
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-8 animate-fadeIn">
@@ -54,7 +56,7 @@ export const CompletedState: React.FC<CompletedStateProps> = ({
               </div>
               <div>
                 <span className="text-slate-500 block">Quality</span>
-                <span className="text-slate-200 font-semibold">4K (3840x2160)</span>
+                <span className="text-slate-200 font-semibold">{qualityLabel}</span>
               </div>
               <div>
                 <span className="text-slate-500 block">Size</span>

@@ -75,3 +75,39 @@ This file tracks the audit findings, automatic fixes, tests executed, and verifi
 
 ### Final Status:
 **GREEN (APPROVED)**
+
+---
+
+## Task 3: Real Download Pipeline, Job Management & Live Stream Wireup
+
+- **Date**: 2026-09-27
+- **Reviewer Agent**: Task 3 Review Agent (Code Reviewer & Backend Architect)
+- **Target**: `server/` (ThreadPoolExecutor pipeline + job manager + SSE stream + file serving) and `client/` (Real backend wireup + SSE progress + Format selection + LocalStorage recents)
+
+### Issues Found:
+1. **Format String Resolution Failure**: When selecting resolution shorthand (e.g. `1080p`, `720p`) or format labels, the download pipeline passed `"1080p+bestaudio/best"` directly to yt-dlp, causing an immediate extraction failure: `Requested format is not available: 1080p+bestaudio/best`.
+2. **Unicode Content-Disposition HTTP 500 Crash**: In `GET /api/jobs/{id}/file`, a manual `Content-Disposition` header was set using the unencoded filename. For any media item containing non-ASCII / Unicode characters (e.g., Chinese, Japanese, Cyrillic, accented characters, emojis), Starlette's `init_headers` threw `UnicodeEncodeError: 'latin-1' codec can't encode characters` causing an HTTP 500 crash.
+3. **Asyncio Cross-Thread Event Loop Desynchronization in SSE Streaming**: `update_job_progress` ran in a background threadpool worker and invoked `queue.put_nowait()` on an `asyncio.Queue` without `loop.call_soon_threadsafe()`, risking missed wakeups or event delay on Windows Proactor event loops. Also, initial state was sent twice to SSE subscribers.
+4. **Cancellation Exception & Windows File Lock Hazard**: If an active download was cancelled, any generic `DownloadError` from yt-dlp without the literal substring "cancelled" would mark the job as `FAILED` instead of `CANCELLED`. Furthermore, `shutil.rmtree` without retry logic could raise Windows `PermissionError` if background processes or indexing services held transient locks.
+5. **Race Condition in Concurrency Counting**: Concurrency checks in `routes.py` accessed `job_manager._jobs.values()` without acquiring `job_manager._lock`, creating a race condition between concurrent requests. In addition, jobs in the `"ANALYZING"` state were omitted from active counts.
+6. **Orphan Directory Leak & Missing Cleanup API**: The cleanup worker only purged in-memory expired jobs. If the server restarted, old temporary directories on disk were permanently orphaned. Also, no programmatic cleanup method existed for test automation.
+7. **Frontend Format Synchronization & Audio Stream Types**: In `FormatSelector.tsx`, switching media URLs failed to update the quality selector to the new media's recommended quality. The `AudioStreamOption` interface in `media.ts` lacked `format_id`. Moreover, `RecentDownloads` redownload button was not wired up in all states and `onViewAll` was non-functional.
+
+### Issues Fixed:
+- **Format Resolution Engine**: Updated `_build_ydl_opts` in `download_pipeline.py` to intelligently parse format shorthand (`1080p`, `720p`, etc.) into `bestvideo[height<=H]+{audio_spec}/best[height<=H]/best`, handle raw numeric IDs (`137`), strip `audio_` prefixes (`audio_140` -> `140`), and configure `FFmpegExtractAudio` with requested codecs (`mp3`, `m4a`, `wav`, `opus`). Added thumbnail format converter (`FFmpegThumbnailsConvertor`) before embedding.
+- **Native RFC 5987 / 6266 Unicode File Serving**: Removed manual `Content-Disposition` override in `routes.py`, allowing Starlette's `FileResponse(path=..., filename=safe_name)` to automatically generate RFC 5987 compliant `filename*=utf-8''...` headers without Unicode encoding errors.
+- **Thread-Safe SSE Event Loop Dispatch**: Updated `JobManager.register_listener` to bind the running asyncio event loop and use `loop.call_soon_threadsafe(queue.put_nowait, data)` for zero-latency, thread-safe SSE event delivery across worker threads.
+- **Robust Cancellation & Windows Safe Rmtree**: Added `safe_rmtree` with transient retry logic on Windows and enhanced exception handling in `download_pipeline.py` to check `job.cancel_event.is_set()`, guaranteeing clean `CANCELLED` status and complete temp directory cleanup.
+- **Thread-Safe Concurrency & Active State Tracking**: Implemented `job_manager.get_active_job_count()` protected by `self._lock` tracking all active states (`QUEUED`, `ANALYZING`, `DOWNLOADING`, `PROCESSING`, `FINALIZING`) in both `create_download_job` and `get_health`.
+- **Comprehensive Cleanup Worker**: Implemented `job_manager.clean_expired_jobs(ttl)` that cleans both in-memory expired jobs and disk orphan directories in `storage/temp`.
+- **Frontend Quality Selection & Recents Wireup**: Updated `FormatSelector.tsx` with a synchronization `useEffect` to select the recommended format whenever new media is loaded; added `format_id?: string` to `AudioStreamOption`; implemented anchor-based redownload in `App.tsx` and wired `onViewAll` to navigate to `RECENT_DOWNLOADS` with a back button. Added dynamic quality display in `CompletedState`.
+
+### Tests Executed:
+- **Server Pytest Suite**: 26 test cases across `test_analyzer.py`, `test_download_pipeline.py`, and `test_live_download_pipeline.py` — 26 passed in 1.28s (100% pass rate).
+- **Client Build**: `npm run build` (`tsc -b && vite build`) compiled cleanly in 683ms with zero errors and zero warnings.
+- **Live Server E2E Test**: `test_live_download_pipeline.py` executed live against a running Uvicorn server verifying health checks, job creation, SSE live stream handshake, immediate cancellation and temp directory cleanup, Unicode file serving, and expired directory cleanup with 100% success.
+- **Task 2 Regression Test**: `live_test.py` executed with 100% pass rate on SSRF, credentials, port blocking, and schema validation.
+
+### Final Status:
+**GREEN (APPROVED)**
+

@@ -10,7 +10,7 @@ import yt_dlp
 from app.config import settings
 from app.core.security import sanitize_filename
 from app.models.schemas import DownloadJobRequest
-from app.services.job_manager import Job, job_manager
+from app.services.job_manager import Job, job_manager, safe_rmtree
 from app.services.ytdlp_service import format_bytes, format_duration
 
 class DownloadCancelledException(Exception):
@@ -99,13 +99,13 @@ class DownloadPipeline:
                 status="CANCELLED",
                 current_stage="Download cancelled by user.",
             )
-            # Purge partial files
+            # Purge partial files safely
             if job.temp_dir and job.temp_dir.exists():
-                shutil.rmtree(job.temp_dir, ignore_errors=True)
+                safe_rmtree(job.temp_dir)
 
         except Exception as e:
             err_msg = str(e)
-            if "cancelled" in err_msg.lower():
+            if job.cancel_event.is_set() or "cancelled" in err_msg.lower():
                 job_manager.update_job_progress(
                     job.id,
                     status="CANCELLED",
@@ -119,9 +119,9 @@ class DownloadPipeline:
                     error=err_msg,
                     error_code="DOWNLOAD_FAILED",
                 )
-            # Cleanup temp dir on failure
+            # Cleanup temp dir on failure safely
             if job.temp_dir and job.temp_dir.exists():
-                shutil.rmtree(job.temp_dir, ignore_errors=True)
+                safe_rmtree(job.temp_dir)
 
     def _build_ydl_opts(self, job: Job) -> dict[str, Any]:
         req = job.request
@@ -143,10 +143,14 @@ class DownloadPipeline:
 
         postprocessors = []
 
+        # Audio stream ID sanitized
+        clean_audio_id = (req.audio_stream_id or "").replace("audio_", "").strip()
+
         if req.audio_only:
             # Audio-only extraction mode
             target_codec = req.container if req.container in ("mp3", "m4a", "wav", "opus") else "mp3"
-            ydl_opts["format"] = "bestaudio/best"
+            audio_fmt = f"{clean_audio_id}/bestaudio/best" if clean_audio_id else "bestaudio/best"
+            ydl_opts["format"] = audio_fmt
             postprocessors.append({
                 "key": "FFmpegExtractAudio",
                 "preferredcodec": target_codec,
@@ -157,20 +161,24 @@ class DownloadPipeline:
             target_container = req.container if req.container in ("mp4", "mkv", "webm", "avi") else "mp4"
             ydl_opts["merge_output_format"] = target_container
 
-            if req.format_id and req.format_id not in ("best", "best_4k"):
-                if "+" in req.format_id:
-                    ydl_opts["format"] = req.format_id
-                else:
-                    ydl_opts["format"] = f"{req.format_id}+bestaudio/best"
-            elif req.resolution:
-                res_clean = req.resolution.lower().replace("p", "").strip()
-                if res_clean.isdigit():
-                    h = int(res_clean)
-                    ydl_opts["format"] = f"bestvideo[height<={h}]+bestaudio/best[height<={h}]/best"
-                else:
-                    ydl_opts["format"] = "bestvideo+bestaudio/best"
+            audio_spec = f"{clean_audio_id}/bestaudio/best" if clean_audio_id else "bestaudio/best"
+            fmt = (req.format_id or "").strip()
+            res = (req.resolution or "").lower().replace("p", "").strip()
+
+            if fmt in ("best", "best_4k", "4k") or (not fmt and not res):
+                ydl_opts["format"] = f"bestvideo+{audio_spec}/best"
+            elif fmt.endswith("p") and fmt[:-1].isdigit():
+                h = int(fmt[:-1])
+                ydl_opts["format"] = f"bestvideo[height<={h}]+{audio_spec}/best[height<={h}]/bestvideo+bestaudio/best"
+            elif res.isdigit():
+                h = int(res)
+                ydl_opts["format"] = f"bestvideo[height<={h}]+{audio_spec}/best[height<={h}]/bestvideo+bestaudio/best"
+            elif "+" in fmt:
+                ydl_opts["format"] = fmt
+            elif fmt:
+                ydl_opts["format"] = f"{fmt}+{audio_spec}/{fmt}+bestaudio/best"
             else:
-                ydl_opts["format"] = "bestvideo+bestaudio/best"
+                ydl_opts["format"] = f"bestvideo+{audio_spec}/best"
 
         # Embed metadata if requested
         if req.embed_metadata:
@@ -180,10 +188,11 @@ class DownloadPipeline:
                 "add_metadata": True,
             })
 
-        # Embed thumbnail if requested
+        # Embed thumbnail if requested (convert to jpg first for maximum container compatibility)
         if req.embed_thumbnail and settings.FFMPEG_PATH:
             ydl_opts["writethumbnail"] = True
-            postprocessors.append({"key": "EmbedThumbnail"})
+            postprocessors.append({"key": "FFmpegThumbnailsConvertor", "format": "jpg", "when": "before_dl"})
+            postprocessors.append({"key": "EmbedThumbnail", "already_have_thumbnail": False})
 
         # Subtitles if requested
         if req.subtitles and req.subtitles.lower() not in ("none", ""):
@@ -267,22 +276,30 @@ class DownloadPipeline:
         return hook
 
     def _find_completed_file(self, temp_dir: Path) -> Optional[Path]:
-        """Find the completed output file, ignoring temporary .part or .ytdl files."""
+        """Find the completed output file, ignoring temporary .part, subtitle, or metadata files."""
         if not temp_dir.exists():
             return None
+
+        ignored_exts = {
+            ".part", ".ytdl", ".temp", ".tmp",
+            ".vtt", ".srt", ".lrc", ".description", ".info.json",
+        }
+        image_exts = {".jpg", ".jpeg", ".png", ".webp"}
 
         candidates = []
         for p in temp_dir.iterdir():
             if p.is_file():
-                if p.suffix.lower() in (".part", ".ytdl", ".temp", ".tmp"):
-                    continue
-                # Ignore thumbnail files if standalone
-                if p.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp") and len(list(temp_dir.iterdir())) > 1:
+                if p.suffix.lower() in ignored_exts:
                     continue
                 candidates.append(p)
 
         if not candidates:
             return None
+
+        # If we have media files alongside image thumbnails, filter out standalone images
+        media_candidates = [p for p in candidates if p.suffix.lower() not in image_exts]
+        if media_candidates:
+            candidates = media_candidates
 
         # Return largest candidate (usually the final video/audio file)
         candidates.sort(key=lambda p: p.stat().st_size, reverse=True)

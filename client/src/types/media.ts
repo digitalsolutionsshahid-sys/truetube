@@ -16,7 +16,8 @@ export interface FormatOption {
 
 export interface AudioStreamOption {
   id: string;
-  format: 'AAC' | 'Opus' | 'MP3';
+  format_id?: string;
+  format: string;
   bitrate: string; // e.g. "128 kbps", "320 kbps"
   is_default?: boolean;
 }

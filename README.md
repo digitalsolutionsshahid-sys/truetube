@@ -69,7 +69,7 @@ TrueTube is a full-stack media platform engineered for high performance, reliabi
 | **Server Runtime** | Uvicorn | ASGI Server |
 | **Media Engine** | yt-dlp | 2026.08.19 native Python API |
 | **Media Transcoder** | FFmpeg / FFprobe | 8.1.1 full build with libmp3lame, libopus |
-| **Test Suites** | Pytest / AnyIO | 26 unit & live integration tests |
+| **Test Suites** | Pytest / AnyIO | 30 unit & live integration tests |
 | **Code Quality** | Oxlint / ESLint / Mypy | Zero warnings, zero errors |
 
 ---
@@ -184,7 +184,7 @@ See [API.md](API.md) for full endpoint specifications, request payloads, and sta
 TrueTube includes a comprehensive suite of automated tests:
 
 ```bash
-# Run backend test suite (26 unit and live integration tests)
+# Run backend test suite (30 unit and live integration tests)
 cd server
 python -m pytest tests/ -v -o pythonpath=.
 

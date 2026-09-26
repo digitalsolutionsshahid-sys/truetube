@@ -33,9 +33,10 @@ Before getting started, make sure you have the following installed:
 │   │   │   ├── FeatureSections.tsx
 │   │   │   ├── Footer.tsx
 │   │   │   ├── FormatSelector.tsx
-│   │   │   ├── Header.tsx
+│   │   │   ├── Header.tsx (Navbar.tsx)
 │   │   │   ├── HeroInput.tsx
 │   │   │   ├── MediaPreview.tsx
+│   │   │   ├── Navbar.tsx
 │   │   │   ├── RecentDownloads.tsx
 │   │   │   └── Toast.tsx
 │   │   ├── services/
@@ -64,10 +65,12 @@ Before getting started, make sure you have the following installed:
 │   │   └── main.py              # FastAPI app instance, CORS, logging, & lifespan hooks
 │   ├── storage/
 │   │   └── temp/                # Ephemeral directories for active downloads
-│   ├── tests/                   # Pytest automated test suite
+│   ├── tests/                   # Pytest automated test suite (30 tests)
 │   │   ├── test_analyzer.py
 │   │   ├── test_download_pipeline.py
-│   │   └── test_live_download_pipeline.py
+│   │   ├── test_live_download_pipeline.py
+│   │   ├── test_e2e_audit.py
+│   │   └── live_test.py
 │   ├── pyproject.toml
 │   └── requirements.txt
 │

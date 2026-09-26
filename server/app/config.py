@@ -22,9 +22,9 @@ class Settings(BaseModel):
     TEMP_STORAGE_PATH: Path = TEMP_DIR
 
     # Concurrency and safety limits
-    MAX_CONCURRENT_JOBS: int = int(os.getenv("TRUETUBE_MAX_JOBS", "5"))
+    MAX_CONCURRENT_JOBS: int = int(os.getenv("TRUETUBE_MAX_JOBS", os.getenv("TRUETUBE_MAX_CONCURRENT_JOBS", "5")))
     JOB_TIMEOUT_SECONDS: int = int(os.getenv("TRUETUBE_JOB_TIMEOUT", "900"))  # 15 minutes
-    FILE_EXPIRATION_SECONDS: int = int(os.getenv("TRUETUBE_FILE_TTL", "3600"))  # 1 hour
+    FILE_EXPIRATION_SECONDS: int = int(os.getenv("TRUETUBE_FILE_TTL", os.getenv("TRUETUBE_FILE_EXPIRATION_SECONDS", "3600")))  # 1 hour
 
     # FFmpeg / FFprobe path
     FFMPEG_PATH: str = os.getenv("FFMPEG_PATH", shutil.which("ffmpeg") or "")

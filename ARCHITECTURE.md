@@ -73,7 +73,7 @@ The client operates on a centralized state machine in [App.tsx](file:///c:/Users
 
 ```
 App.tsx
-├── Header.tsx (Branding, Navigation, Social Links)
+├── Navbar.tsx / Header.tsx (Branding, Navigation, Social Links)
 ├── Toast.tsx (Floating Status Alerts)
 ├── HeroInput.tsx (URL input, clipboard paste, platform pills)
 ├── AnalyzingState.tsx (Radar animation, progress checklist)

@@ -53,6 +53,7 @@ export type JobStatus =
   | 'CANCELLED';
 
 export interface DownloadProgress {
+  job_id?: string;
   status: JobStatus;
   progress_percent: number;
   speed_str: string;

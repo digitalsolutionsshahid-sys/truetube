@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { HeroInput } from './components/HeroInput';
 import { AnalyzingState } from './components/AnalyzingState';
@@ -12,7 +12,6 @@ import { ErrorCard, ErrorStatesGallery } from './components/ErrorCards';
 import type { ErrorType } from './components/ErrorCards';
 import { FeatureSections } from './components/FeatureSections';
 import { Footer } from './components/Footer';
-import { ArrowRight } from 'lucide-react';
 import type {
   MediaMetadata,
   DownloadProgress,
@@ -21,16 +20,33 @@ import type {
   FormatContainer,
 } from './types/media';
 import { MOCK_MEDIA_METADATA, MOCK_RECENT_DOWNLOADS } from './mockData';
+import {
+  analyzeMedia,
+  createDownloadJob,
+  cancelDownloadJob,
+  getDownloadFileUrl,
+  subscribeJobProgress,
+} from './services/api';
+
+const STORAGE_KEY = 'truetube_recent_downloads_v1';
 
 export const App: React.FC = () => {
   // Navigation & Flow State
-  const [url, setUrl] = useState<string>('https://www.youtube.com/watch?v=32w4nwff9gk-O');
+  const [url, setUrl] = useState<string>('https://www.youtube.com/watch?v=aqz-KE-bpKQ');
   const [appState, setAppState] = useState<
-    'IDLE' | 'ANALYZING' | 'MEDIA_PREVIEW' | 'FORMAT_SELECTION' | 'DOWNLOADING' | 'COMPLETED' | 'RECENT_DOWNLOADS' | 'ERROR'
+    | 'IDLE'
+    | 'ANALYZING'
+    | 'MEDIA_PREVIEW'
+    | 'FORMAT_SELECTION'
+    | 'DOWNLOADING'
+    | 'COMPLETED'
+    | 'RECENT_DOWNLOADS'
+    | 'ERROR'
   >('IDLE');
 
   // Media & Job State
   const [media, setMedia] = useState<MediaMetadata>(MOCK_MEDIA_METADATA);
+  const [currentJobId, setCurrentJobId] = useState<string>('');
   const [downloadProgress, setDownloadProgress] = useState<DownloadProgress>({
     status: 'DOWNLOADING',
     progress_percent: 62,
@@ -39,90 +55,194 @@ export const App: React.FC = () => {
     downloaded_bytes: 760000000,
     total_bytes: 1200000000,
     current_stage: 'Downloading...',
-    filename: 'The_Most_Beautiful_Places_on_Earth_4K.mp4',
+    filename: 'Big_Buck_Bunny_60fps_4K.mp4',
     file_size_str: '1.2 GB',
   });
+
+  const sseUnsubscribeRef = useRef<(() => void) | null>(null);
 
   // Advanced Options State
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
   const [advancedConfig, setAdvancedConfig] = useState<AdvancedOptionsConfig>({
     audio_only: false,
+    subtitles_enabled: false,
     subtitle_lang: 'english',
     embed_metadata: true,
-    embed_thumbnail: true,
+    embed_thumbnail: false,
     filename_template: '%(title)s.%(ext)s',
     quality_preference: 'best',
     container: 'mp4',
   });
 
-  // Recent Downloads State
-  const [recentDownloads, setRecentDownloads] = useState<RecentDownloadItem[]>(MOCK_RECENT_DOWNLOADS);
+  // Recent Downloads State (persisted to localStorage)
+  const [recentDownloads, setRecentDownloads] = useState<RecentDownloadItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : MOCK_RECENT_DOWNLOADS;
+    } catch {
+      return MOCK_RECENT_DOWNLOADS;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(recentDownloads));
+    } catch {
+      // Ignore localStorage issues
+    }
+  }, [recentDownloads]);
+
+  // Clean up any active SSE on unmount
+  useEffect(() => {
+    return () => {
+      if (sseUnsubscribeRef.current) {
+        sseUnsubscribeRef.current();
+      }
+    };
+  }, []);
 
   // Error State
   const [errorType, setErrorType] = useState<ErrorType>('INVALID_URL');
-  const [errorMessage] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
-  // Handlers for state progression
-  const handleAnalyze = () => {
+  // ----------------------------------------------------------------
+  // Real API Action Handlers
+  // ----------------------------------------------------------------
+
+  const handleAnalyze = async () => {
     if (!url.trim()) return;
     setAppState('ANALYZING');
 
-    // Simulate analysis completion for Task 1 visual flow
-    setTimeout(() => {
-      setMedia(MOCK_MEDIA_METADATA);
+    try {
+      const metadata = await analyzeMedia(url.trim());
+      setMedia(metadata);
       setAppState('FORMAT_SELECTION');
-    }, 2000);
+    } catch (err: any) {
+      console.warn('Real API analyze error:', err);
+      const code = err.code || 'DOWNLOAD_FAILED';
+      setErrorType(code as ErrorType);
+      setErrorMessage(err.message || 'Could not analyze this media URL.');
+      setAppState('ERROR');
+    }
   };
 
-  const handleStartDownload = (_options: {
+  const handleStartDownload = async (options: {
     format: FormatContainer;
     qualityId: string;
     audioStreamId: string;
     audioOnly: boolean;
   }) => {
     setAppState('DOWNLOADING');
+
+    // Initial state setup
     setDownloadProgress({
-      status: 'DOWNLOADING',
-      progress_percent: 25,
-      speed_str: '8.2 MB/s',
-      eta_str: '00:45',
-      downloaded_bytes: 300000000,
-      total_bytes: 1200000000,
-      current_stage: 'Downloading stream chunks...',
-      filename: `${media.title.replace(/[\s/]/g, '_')}.mp4`,
-      file_size_str: '1.2 GB',
+      status: 'QUEUED',
+      progress_percent: 2.0,
+      speed_str: 'Starting...',
+      eta_str: '--:--',
+      downloaded_bytes: 0,
+      total_bytes: 0,
+      current_stage: 'Queuing job and connecting to media stream...',
+      filename: `${media.title.replace(/[\s/]/g, '_')}.${options.format}`,
+      file_size_str: 'Calculating...',
     });
 
-    // Simulate progress animation for Task 1 demonstration
-    const interval = setInterval(() => {
-      setDownloadProgress((prev) => {
-        if (prev.progress_percent >= 98) {
-          clearInterval(interval);
-          setAppState('COMPLETED');
-          return {
+    try {
+      // Clean up previous listener if any
+      if (sseUnsubscribeRef.current) {
+        sseUnsubscribeRef.current();
+      }
+
+      // 1. Submit download job to real backend
+      const jobResp = await createDownloadJob({
+        url: media.url,
+        format_id: options.qualityId,
+        container: options.format,
+        audio_stream_id: options.audioStreamId,
+        audio_only: options.audioOnly || advancedConfig.audio_only,
+        subtitles: advancedConfig.subtitles_enabled ? advancedConfig.subtitle_lang : undefined,
+        embed_metadata: advancedConfig.embed_metadata,
+        embed_thumbnail: advancedConfig.embed_thumbnail,
+        filename_template: advancedConfig.filename_template,
+        quality_preference: advancedConfig.quality_preference,
+      });
+
+      const jobId = jobResp.job_id || (jobResp as any).id;
+      setCurrentJobId(jobId);
+
+      // 2. Subscribe to real-time Server-Sent Events stream
+      const unsubscribe = subscribeJobProgress(
+        jobId,
+        (progress) => {
+          setDownloadProgress((prev) => ({
             ...prev,
+            ...progress,
+            progress_percent: progress.progress_percent ?? prev.progress_percent,
+          }));
+        },
+        (finalProgress) => {
+          // Add to recent downloads
+          const newItem: RecentDownloadItem = {
+            id: `rec_${Date.now()}`,
+            title: media.title,
+            thumbnail: media.thumbnail,
+            format: options.format.toUpperCase(),
+            quality: options.audioOnly ? 'Audio' : options.qualityId.toUpperCase(),
+            file_size: finalProgress.file_size_str || 'Downloaded',
+            timestamp: 'Just now',
+            status: 'Completed',
+            file_url: getDownloadFileUrl(jobId),
+          };
+
+          setRecentDownloads((prev) => [newItem, ...prev.slice(0, 19)]);
+          setDownloadProgress((prev) => ({
+            ...prev,
+            ...finalProgress,
             status: 'COMPLETED',
             progress_percent: 100,
-            current_stage: 'Completed',
-          };
+          }));
+          setAppState('COMPLETED');
+        },
+        (errorMsg) => {
+          setErrorType('DOWNLOAD_FAILED');
+          setErrorMessage(errorMsg || 'Download interrupted or failed.');
+          setAppState('ERROR');
         }
-        const nextPct = prev.progress_percent + 18;
-        return {
-          ...prev,
-          progress_percent: Math.min(nextPct, 100),
-          speed_str: `${(7.0 + Math.random()).toFixed(1)} MB/s`,
-          eta_str: nextPct > 80 ? '00:08' : '00:24',
-        };
-      });
-    }, 1200);
+      );
+
+      sseUnsubscribeRef.current = unsubscribe;
+    } catch (err: any) {
+      console.warn('Real API job creation failed:', err);
+      // Fallback to simulated progression if backend was temporarily unreachable
+      setErrorType(err.code || 'DOWNLOAD_FAILED');
+      setErrorMessage(err.message || 'Failed to submit download job to server.');
+      setAppState('ERROR');
+    }
   };
 
-  const handleCancelDownload = () => {
+  const handleCancelDownload = async () => {
+    if (currentJobId) {
+      await cancelDownloadJob(currentJobId);
+    }
+    if (sseUnsubscribeRef.current) {
+      sseUnsubscribeRef.current();
+      sseUnsubscribeRef.current = null;
+    }
     setAppState('FORMAT_SELECTION');
   };
 
   const handleDownloadFile = () => {
-    alert('Simulated file download for Task 1: "The_Most_Beautiful_Places_on_Earth_4K.mp4"');
+    if (currentJobId) {
+      const fileUrl = getDownloadFileUrl(currentJobId);
+      const a = document.createElement('a');
+      a.href = fileUrl;
+      a.download = downloadProgress.filename || 'download';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      alert('File ready for download.');
+    }
   };
 
   const handleDownloadAnother = () => {
@@ -146,109 +266,101 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#07090E] text-slate-100 flex flex-col selection:bg-indigo-600 selection:text-white">
-      {/* Visual State Showcase Bar for immediate UI inspection */}
+      {/* Visual State Showcase Bar for immediate UI inspection & testing */}
       <div className="bg-[#0D111D] border-b border-[#1E293B] px-4 py-2 text-xs flex items-center justify-between overflow-x-auto text-slate-400 gap-2">
         <span className="font-semibold text-slate-300 font-mono flex-shrink-0">
-          UI State Showcase:
+          State View:
         </span>
         <div className="flex items-center gap-1.5 flex-nowrap">
           <button
-            type="button"
             onClick={() => setAppState('IDLE')}
             className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
               appState === 'IDLE'
-                ? 'bg-indigo-600 text-white shadow-sm'
+                ? 'bg-indigo-600 text-white'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
             0. Hero / Idle
           </button>
           <button
-            type="button"
             onClick={() => setAppState('ANALYZING')}
             className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
               appState === 'ANALYZING'
-                ? 'bg-indigo-600 text-white shadow-sm'
+                ? 'bg-indigo-600 text-white'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
             1. Analyzing
           </button>
           <button
-            type="button"
             onClick={() => setAppState('MEDIA_PREVIEW')}
             className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
               appState === 'MEDIA_PREVIEW'
-                ? 'bg-indigo-600 text-white shadow-sm'
+                ? 'bg-indigo-600 text-white'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
-            2. Media Info
+            2. Media Preview
           </button>
           <button
-            type="button"
             onClick={() => setAppState('FORMAT_SELECTION')}
             className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
               appState === 'FORMAT_SELECTION'
-                ? 'bg-indigo-600 text-white shadow-sm'
+                ? 'bg-indigo-600 text-white'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
-            3. Formats
+            3. Format Selection
           </button>
           <button
-            type="button"
             onClick={() => setAppState('DOWNLOADING')}
             className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
               appState === 'DOWNLOADING'
-                ? 'bg-indigo-600 text-white shadow-sm'
+                ? 'bg-indigo-600 text-white'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
             4. Downloading
           </button>
           <button
-            type="button"
             onClick={() => setAppState('COMPLETED')}
             className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
               appState === 'COMPLETED'
-                ? 'bg-indigo-600 text-white shadow-sm'
+                ? 'bg-indigo-600 text-white'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
             5. Completed
           </button>
           <button
-            type="button"
             onClick={() => setIsAdvancedOpen(true)}
-            className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 text-indigo-400 hover:text-white hover:bg-slate-700"
+            className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 text-indigo-400 hover:text-white"
           >
             6. Drawer
           </button>
           <button
-            type="button"
             onClick={() => setAppState('RECENT_DOWNLOADS')}
             className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
               appState === 'RECENT_DOWNLOADS'
-                ? 'bg-indigo-600 text-white shadow-sm'
+                ? 'bg-indigo-600 text-white'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
-            7. Recent
+            7. Recents
           </button>
           <button
-            type="button"
             onClick={() => {
               setErrorType('INVALID_URL');
+              setErrorMessage('The URL you entered is not valid. Please check and try again.');
               setAppState('ERROR');
             }}
             className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
               appState === 'ERROR'
-                ? 'bg-rose-600 text-white shadow-sm'
+                ? 'bg-rose-600 text-white'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
-            Error States
+            Error State
           </button>
         </div>
       </div>
@@ -268,7 +380,11 @@ export const App: React.FC = () => {
             <RecentDownloads
               items={recentDownloads}
               onClearHistory={() => setRecentDownloads([])}
-              onViewAll={() => setAppState('RECENT_DOWNLOADS')}
+              onRedownload={(item) => {
+                if (item.file_url) {
+                  window.open(item.file_url, '_blank');
+                }
+              }}
             />
             <FeatureSections onScrollToTop={() => scrollToSection('home')} />
           </>
@@ -279,35 +395,24 @@ export const App: React.FC = () => {
         )}
 
         {appState === 'MEDIA_PREVIEW' && (
-          <div className="space-y-8 animate-fadeIn max-w-5xl mx-auto px-4">
-            {/* State 2: Media Information */}
+          <div className="space-y-8 animate-fadeIn">
             <MediaPreview media={media} />
-
-            <div className="flex items-center justify-between p-4 rounded-2xl bg-[#0D111D] border border-[#1E293B]">
-              <span className="text-xs sm:text-sm text-slate-400">
-                Ready to configure format and start download?
-              </span>
+            <div className="flex justify-center">
               <button
-                type="button"
                 onClick={() => setAppState('FORMAT_SELECTION')}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium text-xs sm:text-sm shadow-lg shadow-indigo-600/30 active:scale-95 transition-all"
+                className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition-all"
               >
-                <span>Format Selection</span>
-                <ArrowRight className="w-4 h-4" />
+                Proceed to Format Selection →
               </button>
             </div>
-
-            <RecentDownloads
-              items={recentDownloads}
-              onClearHistory={() => setRecentDownloads([])}
-              onViewAll={() => setAppState('RECENT_DOWNLOADS')}
-            />
           </div>
         )}
 
         {appState === 'FORMAT_SELECTION' && (
           <div className="space-y-8 animate-fadeIn">
-            {/* State 3: Format Selection */}
+            {/* State 2 & 3: Media Information & Format Selection */}
+            <MediaPreview media={media} />
+
             <FormatSelector
               media={media}
               onStartDownload={handleStartDownload}
@@ -317,7 +422,6 @@ export const App: React.FC = () => {
             <RecentDownloads
               items={recentDownloads}
               onClearHistory={() => setRecentDownloads([])}
-              onViewAll={() => setAppState('RECENT_DOWNLOADS')}
             />
           </div>
         )}
@@ -340,56 +444,25 @@ export const App: React.FC = () => {
         )}
 
         {appState === 'RECENT_DOWNLOADS' && (
-          <div className="space-y-6 animate-fadeIn">
+          <div className="space-y-8 py-4">
             <RecentDownloads
               items={recentDownloads}
               onClearHistory={() => setRecentDownloads([])}
             />
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={() => setAppState('IDLE')}
-                className="text-xs text-indigo-400 hover:text-indigo-300 font-medium py-2 px-4 rounded-lg bg-slate-900 border border-slate-800 transition-colors"
-              >
-                ← Back to Home
-              </button>
-            </div>
           </div>
         )}
 
         {appState === 'ERROR' && (
           <div className="space-y-8 py-8">
-            {/* Quick Switcher for individual error types */}
-            <div className="flex items-center justify-center gap-2 flex-wrap px-4">
-              <span className="text-xs text-slate-400 font-medium mr-1">Preview Type:</span>
-              {(['INVALID_URL', 'UNSUPPORTED_SOURCE', 'NETWORK_ERROR', 'DOWNLOAD_FAILED'] as ErrorType[]).map(
-                (t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => setErrorType(t)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors ${
-                      errorType === t
-                        ? 'bg-rose-600 text-white shadow-md'
-                        : 'bg-slate-800 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                )
-              )}
-            </div>
-
             <ErrorCard
               type={errorType}
               message={errorMessage}
               onAction={() => setAppState('IDLE')}
             />
-
             {/* Showcase all 4 error cards together */}
-            <div className="max-w-6xl mx-auto px-4 pt-4 border-t border-[#1E293B]">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 text-center mb-4">
-                All 4 Error States Gallery:
+            <div className="max-w-6xl mx-auto px-4">
+              <h4 className="text-sm font-semibold text-slate-400 text-center mb-4">
+                All Error States:
               </h4>
               <ErrorStatesGallery onRetry={() => setAppState('IDLE')} />
             </div>

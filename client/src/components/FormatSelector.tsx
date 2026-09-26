@@ -38,17 +38,6 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
   const [selectedAudioFormat, setSelectedAudioFormat] = useState<string>('mp3');
   const [copiedLink, setCopiedLink] = useState(false);
 
-  React.useEffect(() => {
-    if (media.formats && media.formats.length > 0) {
-      const rec = media.formats.find((f) => f.is_recommended);
-      setSelectedQualityId(rec ? rec.id : media.formats[0].id);
-    }
-    if (media.audio_streams && media.audio_streams.length > 0) {
-      const defAudio = media.audio_streams.find((a) => a.is_default);
-      setSelectedAudioId(defAudio ? defAudio.id : media.audio_streams[0].id);
-    }
-  }, [media]);
-
   const handleCopyLink = () => {
     navigator.clipboard.writeText(media.url);
     setCopiedLink(true);

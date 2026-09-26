@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Video as VideoIcon,
   Music,
@@ -38,17 +38,6 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
   const [selectedAudioFormat, setSelectedAudioFormat] = useState<string>('mp3');
   const [copiedLink, setCopiedLink] = useState(false);
 
-  // Synchronize selection if media changes
-  useEffect(() => {
-    const recommendedFormat = media.formats.find((f) => f.is_recommended) || media.formats[0];
-    if (recommendedFormat) {
-      setSelectedQualityId(recommendedFormat.id);
-    }
-    const defaultAudio = media.audio_streams.find((a) => a.is_default) || media.audio_streams[0];
-    if (defaultAudio) {
-      setSelectedAudioId(defaultAudio.id);
-    }
-  }, [media]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(media.url);

@@ -91,20 +91,6 @@ export const App: React.FC = () => {
     }
   });
 
-  const handleRedownloadItem = useCallback((item: RecentDownloadItem) => {
-    if (item.file_url) {
-      const a = document.createElement('a');
-      a.href = item.file_url;
-      a.download = item.title || 'download';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      addToast('info', 'Downloading media', item.title);
-    } else {
-      addToast('warning', 'File expired', 'Please re-analyze the video to download again.');
-    }
-  }, []);
-
   // Toast Notification System
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
 
@@ -119,6 +105,20 @@ export const App: React.FC = () => {
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
+
+  const handleRedownloadItem = useCallback((item: RecentDownloadItem) => {
+    if (item.file_url) {
+      const a = document.createElement('a');
+      a.href = item.file_url;
+      a.download = item.title || 'download';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      addToast('info', 'Downloading media', item.title);
+    } else {
+      addToast('warning', 'File expired', 'Please re-analyze the video to download again.');
+    }
+  }, [addToast]);
 
   useEffect(() => {
     try {

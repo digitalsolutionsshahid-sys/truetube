@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-bg: #07090e;
+  --color-brand-surface: #0d111d;
+  --color-brand-card: #131b2e;
+  --color-brand-card-hover: #182238;
+  --color-brand-border: #1e293b;
+  --color-brand-border-focus: #4f46e5;
+  --color-brand-border-active: #6366f1;
+  --color-brand-primary: #6366f1;
+  --color-brand-accent: #8b5cf6;
+  --color-brand-blue: #3b82f6;
+  --color-brand-cyan: #06b6d4;
+  --color-brand-success: #10b981;
+  --color-brand-warning: #f59e0b;
+  --color-brand-error: #ef4444;
+}
+
+:root {
+  color-scheme: dark;
+  background-color: #07090e;
+  color: #f8fafc;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+  background-color: #07090e;
+  overflow-x: hidden;
+}
+
+/* Custom subtle glow gradients */
+.bg-hero-glow {
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.22), transparent 70%);
+}
+
+.bg-purple-radial {
+  background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.12), transparent 60%);
+}
+
+.glow-border {
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.25);
+}
+
+.glow-text {
+  text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #07090e;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(139, 92, 246, 0.6);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2.5s infinite ease-in-out;
+}

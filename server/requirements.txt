@@ -1,0 +1,6 @@
+fastapi>=0.115.0
+uvicorn>=0.30.0
+yt-dlp>=2026.08.01
+pydantic>=2.7.0
+pytest>=8.0.0
+httpx>=0.27.0

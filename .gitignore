@@ -1,0 +1,27 @@
+# Node
+node_modules/
+dist/
+.vite/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+env/
+venv/
+*.egg-info/
+
+# Storage & Temporary files
+downloads/
+temp/
+storage/temp/
+*.part
+*.ytdl
+
+# Environment & OS
+.env
+.env.local
+.DS_Store
+Thumbs.db

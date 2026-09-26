@@ -72,9 +72,11 @@ export const AdvancedOptionsDrawer: React.FC<AdvancedOptionsDrawerProps> = ({
               </div>
               <button
                 type="button"
+                role="switch"
+                aria-checked={config.audio_only}
                 aria-label="Toggle Audio Only"
                 onClick={() => onChangeConfig({ ...config, audio_only: !config.audio_only })}
-                className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
+                className={`w-12 h-6 rounded-full transition-colors relative p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                   config.audio_only ? 'bg-indigo-600' : 'bg-slate-800 border border-slate-700'
                 }`}
               >
@@ -107,6 +109,8 @@ export const AdvancedOptionsDrawer: React.FC<AdvancedOptionsDrawerProps> = ({
               <div className="pt-5">
                 <button
                   type="button"
+                  role="switch"
+                  aria-checked={config.subtitles_enabled !== false}
                   onClick={() =>
                     onChangeConfig({
                       ...config,
@@ -114,7 +118,7 @@ export const AdvancedOptionsDrawer: React.FC<AdvancedOptionsDrawerProps> = ({
                     })
                   }
                   aria-label="Toggle Subtitles"
-                  className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
+                  className={`w-12 h-6 rounded-full transition-colors relative p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                     config.subtitles_enabled !== false ? 'bg-indigo-600' : 'bg-slate-800 border border-slate-700'
                   }`}
                 >
@@ -135,10 +139,13 @@ export const AdvancedOptionsDrawer: React.FC<AdvancedOptionsDrawerProps> = ({
               </div>
               <button
                 type="button"
+                role="switch"
+                aria-checked={config.embed_metadata}
+                aria-label="Toggle Embed Metadata"
                 onClick={() =>
                   onChangeConfig({ ...config, embed_metadata: !config.embed_metadata })
                 }
-                className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
+                className={`w-12 h-6 rounded-full transition-colors relative p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                   config.embed_metadata ? 'bg-indigo-600' : 'bg-slate-800 border border-slate-700'
                 }`}
               >
@@ -158,10 +165,13 @@ export const AdvancedOptionsDrawer: React.FC<AdvancedOptionsDrawerProps> = ({
               </div>
               <button
                 type="button"
+                role="switch"
+                aria-checked={config.embed_thumbnail}
+                aria-label="Toggle Embed Thumbnail"
                 onClick={() =>
                   onChangeConfig({ ...config, embed_thumbnail: !config.embed_thumbnail })
                 }
-                className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
+                className={`w-12 h-6 rounded-full transition-colors relative p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                   config.embed_thumbnail ? 'bg-indigo-600' : 'bg-slate-800 border border-slate-700'
                 }`}
               >

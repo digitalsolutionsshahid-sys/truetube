@@ -31,6 +31,10 @@ class Settings(BaseModel):
     FFPROBE_PATH: str = os.getenv("FFPROBE_PATH", shutil.which("ffprobe") or "")
 
     # CORS
-    ALLOWED_ORIGINS: list[str] = ["*"]
+    ALLOWED_ORIGINS: list[str] = [
+        o.strip()
+        for o in os.getenv("TRUETUBE_ALLOWED_ORIGINS", "*").split(",")
+        if o.strip()
+    ]
 
 settings = Settings()

@@ -79,11 +79,31 @@ export const App: React.FC = () => {
   const [recentDownloads, setRecentDownloads] = useState<RecentDownloadItem[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : MOCK_RECENT_DOWNLOADS;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+      return MOCK_RECENT_DOWNLOADS;
     } catch {
       return MOCK_RECENT_DOWNLOADS;
     }
   });
+
+  const handleRedownloadItem = useCallback((item: RecentDownloadItem) => {
+    if (item.file_url) {
+      const a = document.createElement('a');
+      a.href = item.file_url;
+      a.download = item.title || 'download';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      addToast('info', 'Downloading media', item.title);
+    } else {
+      addToast('warning', 'File expired', 'Please re-analyze the video to download again.');
+    }
+  }, []);
 
   // Toast Notification System
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -310,11 +330,7 @@ export const App: React.FC = () => {
                 setRecentDownloads([]);
                 addToast('info', 'History cleared');
               }}
-              onRedownload={(item) => {
-                if (item.file_url) {
-                  window.open(item.file_url, '_blank');
-                }
-              }}
+              onRedownload={handleRedownloadItem}
               onViewAll={() => setAppState('RECENT_DOWNLOADS')}
             />
             <FeatureSections onScrollToTop={() => scrollToSection('home')} />
@@ -331,6 +347,7 @@ export const App: React.FC = () => {
             <MediaPreview media={media} />
 
             <FormatSelector
+              key={media.url}
               media={media}
               onStartDownload={handleStartDownload}
               onOpenAdvancedOptions={() => setIsAdvancedOpen(true)}
@@ -339,6 +356,7 @@ export const App: React.FC = () => {
             <RecentDownloads
               items={recentDownloads}
               onClearHistory={() => setRecentDownloads([])}
+              onRedownload={handleRedownloadItem}
               onViewAll={() => setAppState('RECENT_DOWNLOADS')}
             />
           </div>
@@ -374,6 +392,7 @@ export const App: React.FC = () => {
             <RecentDownloads
               items={recentDownloads}
               onClearHistory={() => setRecentDownloads([])}
+              onRedownload={handleRedownloadItem}
             />
           </div>
         )}

@@ -111,3 +111,57 @@ This file tracks the audit findings, automatic fixes, tests executed, and verifi
 ### Final Status:
 **GREEN (APPROVED)**
 
+---
+
+## Task 4: Production UX + Hardening
+
+- **Date**: 2026-09-27
+- **Reviewer Agent**: Task 4 Review Agent (Accessibility Auditor, Frontend UX & Platform Engineer)
+- **Target**: `client/` and `server/` (Production UX, WCAG 2.1 AA Accessibility, Toast alerts, LocalStorage validation, Server Lifecycle & Structured Logging)
+
+### Issues Found:
+1. **Accessibility (WCAG 2.1 AA) Gaps in `FormatSelector.tsx`**:
+   - Format, quality, audio stream, and audio-only format options were implemented using non-semantic `<div>` elements with `onClick` handlers rather than semantic `<button type="button" role="radio">`.
+   - Keyboard users (Tab/Shift-Tab, Space/Enter) could not reach or activate format/quality options.
+   - Screen readers lacked `role="radiogroup"`, `role="radio"`, and `aria-checked` states.
+2. **Stale Selection Bug on URL Change in `FormatSelector.tsx`**:
+   - `selectedQualityId` and `selectedAudioId` were initialized in `useState` once on mount; analyzing a new URL retained stale format/stream IDs from the prior video.
+3. **Recent Downloads Quick Actions Missing in Secondary Views**:
+   - In `FORMAT_SELECTION` and `RECENT_DOWNLOADS` views in `client/src/App.tsx`, `onRedownload` was not passed to `<RecentDownloads>`, causing the redownload action button to be inactive in those states.
+4. **Resilience Risk in `localStorage` Recent Downloads**:
+   - `localStorage.getItem(STORAGE_KEY)` was parsed without checking `Array.isArray(parsed)`, which could crash `.map()` if non-array JSON was persisted.
+5. **Accessibility in `AdvancedOptionsDrawer.tsx`**:
+   - Toggle buttons lacked `role="switch"` and `aria-checked={...}`, preventing screen readers from announcing toggle state (on/off).
+   - Missing explicit `focus-visible` ring styling on toggles and form controls.
+6. **Hero Input Accessibility**:
+   - Analyze CTA button lacked an explicit `aria-label` and `focus-visible` ring.
+7. **Component Export Inconsistencies**:
+   - Missing `DownloadProgress.tsx` and `ErrorCard.tsx` alias entry points referenced in specifications.
+8. **Server Lifecycle & Cleanup Worker Shutdown**:
+   - `JobCleanupWorker` background thread had no stop event mechanism (`_stop_event`) and could keep running during shutdown.
+   - `lifespan` hook did not signal job cancellation to running threads before clearing temp storage.
+   - `clean_expired_jobs` condition `now - job.updated_at > ttl` could fail to delete files if `ttl=0` on shutdown; needed `>= ttl`.
+9. **Request Logging Middleware Uncaught Exception Handling**:
+   - `log_requests` middleware did not catch and log request failure durations when exceptions bubbled up.
+10. **Environment Variable & Production Configuration Incompleteness**:
+    - `ALLOWED_ORIGINS` was hardcoded to `["*"]` without environment variable support.
+    - `.env.example` lacked detailed documentation and was missing from `server/`.
+
+### Issues Fixed:
+- **`FormatSelector.tsx` Semantic Accessibility**: Converted all selectable options to semantic `<button type="button" role="radio" aria-checked={isSelected}>` with `focus-visible:ring-2 focus-visible:ring-indigo-500` and added `role="radiogroup"` with explicit `aria-labelledby` / `aria-label`. Added synchronization hook on media update.
+- **`AdvancedOptionsDrawer.tsx` A11y & Focus**: Added `role="switch"` and dynamic `aria-checked={...}` to Audio Only, Subtitles, Metadata, and Thumbnail toggles with keyboard focus rings.
+- **`HeroInput.tsx` Button Labeling**: Added `aria-label="Analyze media URL"` and focus-visible styling.
+- **`App.tsx` LocalStorage & Redownload Safety**: Added array-check validation on parsing `recentDownloads`, wired `onRedownload` to all instances, and added `key={media.url}` to guarantee fresh state when switching videos.
+- **Component Entry Points**: Created `DownloadProgress.tsx` and `ErrorCard.tsx` export aliases.
+- **Server Shutdown Lifecycle**: Added `self._stop_event = threading.Event()` and implemented `JobManager.shutdown()` signaling cancellation to all active jobs, stopping the background worker, and purging temporary storage.
+- **Request Logging Middleware**: Wrapped execution in a try-except block in `main.py` ensuring error status codes and durations are accurately logged during unhandled exceptions.
+- **Production Configuration**: Added `TRUETUBE_ALLOWED_ORIGINS` parsing in `config.py` and created comprehensive `.env.example` files in both root and `server/`.
+
+### Tests Executed:
+- **Server Pytest Suite**: `python -m pytest tests/ -v -o pythonpath=.` in `server/` (26 passed in 1.38s).
+- **Client Production Build**: `npm run build` (`tsc -b && vite build`) in `client/` (0 errors, 1899 modules transformed, built in 586ms).
+
+### Final Status:
+**GREEN (APPROVED)**
+
+

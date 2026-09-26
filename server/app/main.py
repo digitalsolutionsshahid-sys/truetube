@@ -30,8 +30,8 @@ async def lifespan(app: FastAPI):
     # Shutdown hook
     logger.info("Shutting down %s...", settings.APP_NAME)
     download_pipeline.executor.shutdown(wait=False, cancel_futures=True)
-    # Purge any remaining temp files on clean shutdown
-    job_manager.clean_expired_jobs(ttl=0)
+    # Stop cleanup worker and purge all remaining temp files on clean shutdown
+    job_manager.shutdown()
     logger.info("Shutdown completed.")
 
 app = FastAPI(
@@ -54,19 +54,30 @@ app.add_middleware(
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
     start_time = time.time()
-    response = await call_next(request)
-    duration_ms = (time.time() - start_time) * 1000.0
+    try:
+        response = await call_next(request)
+        duration_ms = (time.time() - start_time) * 1000.0
 
-    # Avoid cluttering logs with static asset queries
-    if not request.url.path.startswith("/assets/"):
-        logger.info(
-            "%s %s -> %s (%.1fms)",
+        # Avoid cluttering logs with static asset queries
+        if not request.url.path.startswith("/assets/"):
+            logger.info(
+                "%s %s -> %s (%.1fms)",
+                request.method,
+                request.url.path,
+                response.status_code,
+                duration_ms,
+            )
+        return response
+    except Exception as exc:
+        duration_ms = (time.time() - start_time) * 1000.0
+        logger.error(
+            "%s %s -> FAILED (%.1fms): %s",
             request.method,
             request.url.path,
-            response.status_code,
             duration_ms,
+            str(exc),
         )
-    return response
+        raise
 
 # Register API routes
 app.include_router(api_router)

@@ -95,6 +95,7 @@ class JobManager:
     def __init__(self):
         self._jobs: dict[str, Job] = {}
         self._lock = threading.Lock()
+        self._stop_event = threading.Event()
         self._start_cleanup_worker()
 
     def create_job(self, req: DownloadJobRequest) -> Job:
@@ -234,7 +235,7 @@ class JobManager:
 
         with self._lock:
             for j_id, job in self._jobs.items():
-                if now - job.updated_at > ttl:
+                if now - job.updated_at >= ttl:
                     expired_ids.append(j_id)
 
         cleaned_count = 0
@@ -252,7 +253,7 @@ class JobManager:
                     if item.is_dir():
                         try:
                             mtime = item.stat().st_mtime
-                            if now - mtime > ttl:
+                            if now - mtime >= ttl:
                                 safe_rmtree(item)
                                 cleaned_count += 1
                         except Exception:
@@ -265,11 +266,18 @@ class JobManager:
     def _start_cleanup_worker(self):
         """Background thread that runs periodically to remove expired job directories."""
         def cleanup_loop():
-            while True:
-                time.sleep(300)  # Check every 5 minutes
+            while not self._stop_event.wait(300):
                 self.clean_expired_jobs()
 
         t = threading.Thread(target=cleanup_loop, daemon=True, name="JobCleanupWorker")
         t.start()
+
+    def shutdown(self):
+        """Signals worker thread to stop, marks active jobs cancelled, and cleans storage."""
+        self._stop_event.set()
+        with self._lock:
+            for job in self._jobs.values():
+                job.cancel_event.set()
+        self.clean_expired_jobs(ttl=0)
 
 job_manager = JobManager()

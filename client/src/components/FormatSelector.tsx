@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Video as VideoIcon,
   Music,
@@ -37,6 +37,18 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
   );
   const [selectedAudioFormat, setSelectedAudioFormat] = useState<string>('mp3');
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Synchronize selection if media changes
+  useEffect(() => {
+    const recommendedFormat = media.formats.find((f) => f.is_recommended) || media.formats[0];
+    if (recommendedFormat) {
+      setSelectedQualityId(recommendedFormat.id);
+    }
+    const defaultAudio = media.audio_streams.find((a) => a.is_default) || media.audio_streams[0];
+    if (defaultAudio) {
+      setSelectedAudioId(defaultAudio.id);
+    }
+  }, [media]);
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(media.url);
@@ -130,17 +142,20 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-6">
             {/* Format Column (4 cols) */}
             <div className="md:col-span-4 space-y-2">
-              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-3">
+              <label id="format-group-label" className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-3">
                 Format
               </label>
-              <div className="space-y-2">
+              <div role="radiogroup" aria-labelledby="format-group-label" className="space-y-2">
                 {formatList.map((f) => {
                   const isSelected = selectedFormat === f.id;
                   return (
-                    <div
+                    <button
                       key={f.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
                       onClick={() => setSelectedFormat(f.id)}
-                      className={`relative flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all ${
+                      className={`w-full text-left relative flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                         isSelected
                           ? 'bg-indigo-950/40 border-indigo-500 shadow-md shadow-indigo-500/10'
                           : 'bg-[#131B2E]/60 border-[#1E293B] hover:border-slate-700 hover:bg-[#131B2E]'
@@ -166,7 +181,7 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                       >
                         {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -174,17 +189,20 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
 
             {/* Quality Column (5 cols) */}
             <div className="md:col-span-5 space-y-2">
-              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-3">
+              <label id="quality-group-label" className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-3">
                 Quality
               </label>
-              <div className="space-y-2 max-h-[290px] overflow-y-auto pr-1">
+              <div role="radiogroup" aria-labelledby="quality-group-label" className="space-y-2 max-h-[290px] overflow-y-auto pr-1">
                 {media.formats.map((q) => {
                   const isSelected = selectedQualityId === q.id;
                   return (
-                    <div
+                    <button
                       key={q.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
                       onClick={() => setSelectedQualityId(q.id)}
-                      className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                      className={`w-full text-left flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                         isSelected
                           ? 'bg-indigo-950/40 border-indigo-500 shadow-md shadow-indigo-500/10'
                           : 'bg-[#131B2E]/60 border-[#1E293B] hover:border-slate-700 hover:bg-[#131B2E]'
@@ -220,7 +238,7 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                       <span className="text-xs font-mono font-medium text-slate-300">
                         {q.approx_size_str}
                       </span>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -228,17 +246,20 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
 
             {/* Audio Column (3 cols) */}
             <div className="md:col-span-3 space-y-2">
-              <label className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-3">
+              <label id="audio-group-label" className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-3">
                 Audio Track
               </label>
-              <div className="space-y-2">
+              <div role="radiogroup" aria-labelledby="audio-group-label" className="space-y-2">
                 {media.audio_streams.map((a) => {
                   const isSelected = selectedAudioId === a.id;
                   return (
-                    <div
+                    <button
                       key={a.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={isSelected}
                       onClick={() => setSelectedAudioId(a.id)}
-                      className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${
+                      className={`w-full text-left flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                         isSelected
                           ? 'bg-indigo-950/40 border-indigo-500 shadow-md shadow-indigo-500/10'
                           : 'bg-[#131B2E]/60 border-[#1E293B] hover:border-slate-700 hover:bg-[#131B2E]'
@@ -259,7 +280,7 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                       >
                         {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
               </div>
@@ -267,14 +288,17 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
           </div>
         ) : (
           /* Tab 2: Audio Only Mode */
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div role="radiogroup" aria-label="Audio format selection" className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {audioFormats.map((af) => {
               const isSelected = selectedAudioFormat === af.id;
               return (
-                <div
+                <button
                   key={af.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
                   onClick={() => setSelectedAudioFormat(af.id)}
-                  className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                  className={`w-full text-left p-4 rounded-2xl border cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
                     isSelected
                       ? 'bg-indigo-950/50 border-indigo-500 shadow-lg shadow-indigo-500/20'
                       : 'bg-[#131B2E]/60 border-[#1E293B] hover:border-slate-700 hover:bg-[#131B2E]'
@@ -293,7 +317,7 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                     </div>
                   </div>
                   <p className="text-xs text-slate-400">{af.desc}</p>
-                </div>
+                </button>
               );
             })}
           </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, Loader2, Circle, X } from 'lucide-react';
+import { Check, Loader2, Circle, X, Link2 } from 'lucide-react';
 
 interface AnalyzingStateProps {
   url: string;
@@ -21,23 +21,43 @@ export const AnalyzingState: React.FC<AnalyzingStateProps> = ({ url, onCancel })
 
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-8 animate-fadeIn">
-      {/* Top summary URL bar with Cancel */}
-      <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-[#0D111D] border border-[#1E293B] mb-12 shadow-xl">
-        <div className="flex items-center gap-3 overflow-hidden text-sm text-slate-300 font-mono px-2">
-          <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse flex-shrink-0" />
-          <span className="truncate max-w-xs sm:max-w-md md:max-w-xl">{url}</span>
+      {/* Top summary URL bar with disabled Analyze and Cancel matching Stitch */}
+      <div className="mb-10 max-w-2xl mx-auto">
+        <div className="flex items-center gap-2 p-2 sm:p-2.5 rounded-2xl bg-[#0D111D] border border-[#1E293B] shadow-xl">
+          <div className="pl-3 text-slate-500 flex items-center justify-center">
+            <Link2 className="w-5 h-5 text-indigo-400" />
+          </div>
+          <div className="flex-1 py-2 px-2 text-white font-mono text-xs sm:text-sm truncate">
+            {url}
+          </div>
+          <button
+            type="button"
+            disabled
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600/40 text-slate-300 font-medium text-xs sm:text-sm opacity-60 cursor-not-allowed"
+          >
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            <span>Analyze</span>
+          </button>
         </div>
-        <button
-          onClick={onCancel}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#1E293B] bg-slate-800/40 hover:bg-rose-500/10 hover:border-rose-500/30 hover:text-rose-400 text-xs text-slate-400 transition-all flex-shrink-0"
-        >
-          <X className="w-3.5 h-3.5" />
-          <span>Cancel</span>
-        </button>
+        <div className="flex justify-end mt-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="flex items-center gap-1 text-xs text-slate-500 hover:text-rose-400 transition-colors px-2 py-1"
+            aria-label="Cancel analysis"
+          >
+            <X className="w-3.5 h-3.5" />
+            <span>Cancel</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Analysis Visual Card */}
-      <div className="flex flex-col items-center justify-center p-8 sm:p-14 rounded-3xl bg-[#0D111D]/80 border border-[#1E293B] shadow-2xl relative overflow-hidden backdrop-blur-xl">
+      <div
+        role="status"
+        aria-live="polite"
+        className="flex flex-col items-center justify-center p-8 sm:p-14 rounded-3xl bg-[#0D111D]/80 border border-[#1E293B] shadow-2xl relative overflow-hidden backdrop-blur-xl"
+      >
         {/* Glow backdrop */}
         <div className="absolute w-72 h-72 bg-indigo-600/10 rounded-full blur-3xl -top-10 pointer-events-none" />
 

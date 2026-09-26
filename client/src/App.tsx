@@ -12,6 +12,7 @@ import { ErrorCard, ErrorStatesGallery } from './components/ErrorCards';
 import type { ErrorType } from './components/ErrorCards';
 import { FeatureSections } from './components/FeatureSections';
 import { Footer } from './components/Footer';
+import { ArrowRight } from 'lucide-react';
 import type {
   MediaMetadata,
   DownloadProgress,
@@ -25,7 +26,7 @@ export const App: React.FC = () => {
   // Navigation & Flow State
   const [url, setUrl] = useState<string>('https://www.youtube.com/watch?v=32w4nwff9gk-O');
   const [appState, setAppState] = useState<
-    'IDLE' | 'ANALYZING' | 'FORMAT_SELECTION' | 'DOWNLOADING' | 'COMPLETED' | 'ERROR'
+    'IDLE' | 'ANALYZING' | 'MEDIA_PREVIEW' | 'FORMAT_SELECTION' | 'DOWNLOADING' | 'COMPLETED' | 'RECENT_DOWNLOADS' | 'ERROR'
   >('IDLE');
 
   // Media & Job State
@@ -152,73 +153,102 @@ export const App: React.FC = () => {
         </span>
         <div className="flex items-center gap-1.5 flex-nowrap">
           <button
+            type="button"
             onClick={() => setAppState('IDLE')}
             className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
               appState === 'IDLE'
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-indigo-600 text-white shadow-sm'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
             0. Hero / Idle
           </button>
           <button
+            type="button"
             onClick={() => setAppState('ANALYZING')}
             className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
               appState === 'ANALYZING'
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-indigo-600 text-white shadow-sm'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
             1. Analyzing
           </button>
           <button
-            onClick={() => setAppState('FORMAT_SELECTION')}
+            type="button"
+            onClick={() => setAppState('MEDIA_PREVIEW')}
             className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
-              appState === 'FORMAT_SELECTION'
-                ? 'bg-indigo-600 text-white'
+              appState === 'MEDIA_PREVIEW'
+                ? 'bg-indigo-600 text-white shadow-sm'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
-            2 & 3. Media & Formats
+            2. Media Info
           </button>
           <button
+            type="button"
+            onClick={() => setAppState('FORMAT_SELECTION')}
+            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+              appState === 'FORMAT_SELECTION'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-slate-800 text-slate-400 hover:text-white'
+            }`}
+          >
+            3. Formats
+          </button>
+          <button
+            type="button"
             onClick={() => setAppState('DOWNLOADING')}
             className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
               appState === 'DOWNLOADING'
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-indigo-600 text-white shadow-sm'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
             4. Downloading
           </button>
           <button
+            type="button"
             onClick={() => setAppState('COMPLETED')}
             className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
               appState === 'COMPLETED'
-                ? 'bg-indigo-600 text-white'
+                ? 'bg-indigo-600 text-white shadow-sm'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
             5. Completed
           </button>
           <button
+            type="button"
             onClick={() => setIsAdvancedOpen(true)}
-            className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 text-indigo-400 hover:text-white"
+            className="px-2.5 py-1 rounded-md text-xs font-medium bg-slate-800 text-indigo-400 hover:text-white hover:bg-slate-700"
           >
             6. Drawer
           </button>
           <button
+            type="button"
+            onClick={() => setAppState('RECENT_DOWNLOADS')}
+            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
+              appState === 'RECENT_DOWNLOADS'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'bg-slate-800 text-slate-400 hover:text-white'
+            }`}
+          >
+            7. Recent
+          </button>
+          <button
+            type="button"
             onClick={() => {
               setErrorType('INVALID_URL');
               setAppState('ERROR');
             }}
             className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
               appState === 'ERROR'
-                ? 'bg-rose-600 text-white'
+                ? 'bg-rose-600 text-white shadow-sm'
                 : 'bg-slate-800 text-slate-400 hover:text-white'
             }`}
           >
-            Error State
+            Error States
           </button>
         </div>
       </div>
@@ -238,6 +268,7 @@ export const App: React.FC = () => {
             <RecentDownloads
               items={recentDownloads}
               onClearHistory={() => setRecentDownloads([])}
+              onViewAll={() => setAppState('RECENT_DOWNLOADS')}
             />
             <FeatureSections onScrollToTop={() => scrollToSection('home')} />
           </>
@@ -247,11 +278,35 @@ export const App: React.FC = () => {
           <AnalyzingState url={url} onCancel={() => setAppState('IDLE')} />
         )}
 
-        {appState === 'FORMAT_SELECTION' && (
-          <div className="space-y-8 animate-fadeIn">
+        {appState === 'MEDIA_PREVIEW' && (
+          <div className="space-y-8 animate-fadeIn max-w-5xl mx-auto px-4">
             {/* State 2: Media Information */}
             <MediaPreview media={media} />
 
+            <div className="flex items-center justify-between p-4 rounded-2xl bg-[#0D111D] border border-[#1E293B]">
+              <span className="text-xs sm:text-sm text-slate-400">
+                Ready to configure format and start download?
+              </span>
+              <button
+                type="button"
+                onClick={() => setAppState('FORMAT_SELECTION')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium text-xs sm:text-sm shadow-lg shadow-indigo-600/30 active:scale-95 transition-all"
+              >
+                <span>Format Selection</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+
+            <RecentDownloads
+              items={recentDownloads}
+              onClearHistory={() => setRecentDownloads([])}
+              onViewAll={() => setAppState('RECENT_DOWNLOADS')}
+            />
+          </div>
+        )}
+
+        {appState === 'FORMAT_SELECTION' && (
+          <div className="space-y-8 animate-fadeIn">
             {/* State 3: Format Selection */}
             <FormatSelector
               media={media}
@@ -262,6 +317,7 @@ export const App: React.FC = () => {
             <RecentDownloads
               items={recentDownloads}
               onClearHistory={() => setRecentDownloads([])}
+              onViewAll={() => setAppState('RECENT_DOWNLOADS')}
             />
           </div>
         )}
@@ -283,17 +339,57 @@ export const App: React.FC = () => {
           />
         )}
 
+        {appState === 'RECENT_DOWNLOADS' && (
+          <div className="space-y-6 animate-fadeIn">
+            <RecentDownloads
+              items={recentDownloads}
+              onClearHistory={() => setRecentDownloads([])}
+            />
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setAppState('IDLE')}
+                className="text-xs text-indigo-400 hover:text-indigo-300 font-medium py-2 px-4 rounded-lg bg-slate-900 border border-slate-800 transition-colors"
+              >
+                ← Back to Home
+              </button>
+            </div>
+          </div>
+        )}
+
         {appState === 'ERROR' && (
           <div className="space-y-8 py-8">
+            {/* Quick Switcher for individual error types */}
+            <div className="flex items-center justify-center gap-2 flex-wrap px-4">
+              <span className="text-xs text-slate-400 font-medium mr-1">Preview Type:</span>
+              {(['INVALID_URL', 'UNSUPPORTED_SOURCE', 'NETWORK_ERROR', 'DOWNLOAD_FAILED'] as ErrorType[]).map(
+                (t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => setErrorType(t)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-mono font-medium transition-colors ${
+                      errorType === t
+                        ? 'bg-rose-600 text-white shadow-md'
+                        : 'bg-slate-800 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                )
+              )}
+            </div>
+
             <ErrorCard
               type={errorType}
               message={errorMessage}
               onAction={() => setAppState('IDLE')}
             />
+
             {/* Showcase all 4 error cards together */}
-            <div className="max-w-6xl mx-auto px-4">
-              <h4 className="text-sm font-semibold text-slate-400 text-center mb-4">
-                All Error States:
+            <div className="max-w-6xl mx-auto px-4 pt-4 border-t border-[#1E293B]">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400 text-center mb-4">
+                All 4 Error States Gallery:
               </h4>
               <ErrorStatesGallery onRetry={() => setAppState('IDLE')} />
             </div>

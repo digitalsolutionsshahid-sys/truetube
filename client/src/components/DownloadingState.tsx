@@ -91,7 +91,14 @@ export const DownloadingState: React.FC<DownloadingStateProps> = ({
         </div>
 
         {/* High-Tech Glowing Progress Bar */}
-        <div className="relative w-full h-3 sm:h-3.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800 mb-8 p-0.5">
+        <div
+          role="progressbar"
+          aria-valuenow={Math.round(percent)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-label="Download progress"
+          className="relative w-full h-3 sm:h-3.5 bg-slate-900 rounded-full overflow-hidden border border-slate-800 mb-8 p-0.5"
+        >
           <div
             className="h-full bg-gradient-to-r from-indigo-500 via-violet-500 to-indigo-400 rounded-full transition-all duration-300 relative shadow-lg shadow-indigo-500/50"
             style={{ width: `${Math.max(percent, 2)}%` }}

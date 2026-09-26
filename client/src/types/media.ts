@@ -69,6 +69,7 @@ export interface DownloadProgress {
 
 export interface AdvancedOptionsConfig {
   audio_only: boolean;
+  subtitles_enabled?: boolean;
   subtitle_lang: string;
   embed_metadata: boolean;
   embed_thumbnail: boolean;

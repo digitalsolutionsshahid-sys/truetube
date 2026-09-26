@@ -1,5 +1,5 @@
-import React from 'react';
-import { Play, CheckCircle2, ExternalLink, Clock, HardDrive, Video, Music, Subtitles } from 'lucide-react';
+import React, { useState } from 'react';
+import { Play, CheckCircle2, Copy, Check, Clock, HardDrive, Video, Music, Subtitles } from 'lucide-react';
 import type { MediaMetadata } from '../types/media';
 
 interface MediaPreviewProps {
@@ -7,6 +7,13 @@ interface MediaPreviewProps {
 }
 
 export const MediaPreview: React.FC<MediaPreviewProps> = ({ media }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(media.url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full max-w-5xl mx-auto px-4">
       {/* Left Card: Cinematic Media Thumbnail & Details (7 cols on lg) */}
@@ -53,16 +60,23 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({ media }) => {
         </div>
 
         {/* URL Link pill */}
-        <div className="pt-2 border-t border-[#1E293B]">
-          <a
-            href={media.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800/40 hover:bg-slate-800 border border-slate-800 text-xs text-indigo-300 font-mono transition-colors max-w-full truncate"
-          >
-            <ExternalLink className="w-3 h-3 flex-shrink-0" />
-            <span className="truncate">{media.url}</span>
-          </a>
+        <div className="pt-3 border-t border-[#1E293B]">
+          <div className="flex items-center justify-between gap-2 p-1.5 sm:p-2 rounded-xl bg-slate-900/80 border border-[#1E293B] text-xs font-mono text-slate-300">
+            <span className="truncate px-2 text-slate-400">{media.url}</span>
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-indigo-400 transition-colors flex-shrink-0"
+              title="Copy URL"
+              aria-label="Copy URL"
+            >
+              {copied ? (
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+              ) : (
+                <Copy className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
         </div>
       </div>
 

@@ -12,7 +12,7 @@ export const MOCK_MEDIA_METADATA: MediaMetadata = {
   view_count_string: '1.2M views',
   upload_date: 'Apr 12, 2024',
   source_domain: 'youtube.com',
-  approx_size_str: '326 MB',
+  approx_size_str: '328 MB',
   available_video_formats: ['MP4', 'WebM', 'MKV'],
   available_audio_formats: ['MP3', 'M4A', 'AAC'],
   subtitles: ['English', 'Spanish', 'French', '+3'],
@@ -71,7 +71,7 @@ export const MOCK_MEDIA_METADATA: MediaMetadata = {
       fps: 30,
       container: 'mp4',
       codec: 'H.264',
-      approx_size_str: '~150 MB',
+      approx_size_str: '~200 MB',
     },
     {
       id: '360p',
@@ -82,7 +82,7 @@ export const MOCK_MEDIA_METADATA: MediaMetadata = {
       fps: 30,
       container: 'mp4',
       codec: 'H.264',
-      approx_size_str: '~100 MB',
+      approx_size_str: '~120 MB',
     },
   ],
   audio_streams: [

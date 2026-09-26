@@ -31,7 +31,7 @@ export const CompletedState: React.FC<CompletedStateProps> = ({
           Download Complete!
         </h2>
         <p className="text-sm sm:text-base text-slate-400 mb-8 max-w-md mx-auto">
-          Your file has been processed and is ready for download.
+          Your file has been downloaded successfully.
         </p>
 
         {/* Media Spec Summary Card */}
@@ -54,7 +54,7 @@ export const CompletedState: React.FC<CompletedStateProps> = ({
               </div>
               <div>
                 <span className="text-slate-500 block">Quality</span>
-                <span className="text-slate-200 font-semibold">4K (2160p)</span>
+                <span className="text-slate-200 font-semibold">4K (3840x2160)</span>
               </div>
               <div>
                 <span className="text-slate-500 block">Size</span>

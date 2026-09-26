@@ -6,12 +6,14 @@ interface RecentDownloadsProps {
   items: RecentDownloadItem[];
   onRedownload?: (item: RecentDownloadItem) => void;
   onClearHistory?: () => void;
+  onViewAll?: () => void;
 }
 
 export const RecentDownloads: React.FC<RecentDownloadsProps> = ({
   items,
   onRedownload,
   onClearHistory,
+  onViewAll,
 }) => {
   if (!items || items.length === 0) return null;
 
@@ -32,16 +34,23 @@ export const RecentDownloads: React.FC<RecentDownloadsProps> = ({
           <div className="flex items-center gap-3">
             {onClearHistory && (
               <button
+                type="button"
                 onClick={onClearHistory}
                 className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                aria-label="Clear download history"
               >
                 Clear
               </button>
             )}
-            <span className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium cursor-pointer">
+            <button
+              type="button"
+              onClick={onViewAll}
+              className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium transition-colors"
+              aria-label="View all recent downloads"
+            >
               <span>View all</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </span>
+            </button>
           </div>
         </div>
 

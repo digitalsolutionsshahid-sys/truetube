@@ -24,7 +24,7 @@ export const ErrorCard: React.FC<ErrorCardProps> = ({ type, message, onAction })
       iconColor: 'text-amber-400',
       bgColor: 'bg-amber-500/10 border-amber-500/30',
       title: 'Unsupported Source',
-      defaultMsg: 'This website is not currently supported or is geo-restricted.',
+      defaultMsg: 'This website is not currently supported.',
       actionText: 'View Supported Sites',
     },
     NETWORK_ERROR: {
@@ -40,7 +40,7 @@ export const ErrorCard: React.FC<ErrorCardProps> = ({ type, message, onAction })
       iconColor: 'text-rose-400',
       bgColor: 'bg-rose-500/10 border-rose-500/30',
       title: 'Download Failed',
-      defaultMsg: 'Something went wrong during the download or conversion process.',
+      defaultMsg: 'Something went wrong during the download process.',
       actionText: 'Try Again',
     },
   };

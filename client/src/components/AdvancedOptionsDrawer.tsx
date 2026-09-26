@@ -17,6 +17,16 @@ export const AdvancedOptionsDrawer: React.FC<AdvancedOptionsDrawerProps> = ({
   onChangeConfig,
   availableSubtitles = ['None', 'English', 'Spanish', 'French'],
 }) => {
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -28,7 +38,12 @@ export const AdvancedOptionsDrawer: React.FC<AdvancedOptionsDrawerProps> = ({
       />
 
       {/* Drawer Container */}
-      <div className="relative w-full max-w-md bg-[#0D111D] border-l border-[#1E293B] shadow-2xl h-full flex flex-col justify-between z-10 overflow-y-auto">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Advanced Options"
+        className="relative w-full max-w-md bg-[#0D111D] border-l border-[#1E293B] shadow-2xl h-full flex flex-col justify-between z-10 overflow-y-auto"
+      >
         <div>
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-[#1E293B]">
@@ -57,6 +72,7 @@ export const AdvancedOptionsDrawer: React.FC<AdvancedOptionsDrawerProps> = ({
               </div>
               <button
                 type="button"
+                aria-label="Toggle Audio Only"
                 onClick={() => onChangeConfig({ ...config, audio_only: !config.audio_only })}
                 className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
                   config.audio_only ? 'bg-indigo-600' : 'bg-slate-800 border border-slate-700'
@@ -70,22 +86,45 @@ export const AdvancedOptionsDrawer: React.FC<AdvancedOptionsDrawerProps> = ({
               </button>
             </div>
 
-            {/* Subtitle language dropdown */}
-            <div>
-              <label className="text-sm font-semibold text-white block mb-1.5">
-                Subtitles
-              </label>
-              <select
-                value={config.subtitle_lang}
-                onChange={(e) => onChangeConfig({ ...config, subtitle_lang: e.target.value })}
-                className="w-full bg-[#131B2E] border border-[#1E293B] rounded-xl px-3.5 py-2.5 text-sm text-slate-200 focus:outline-none focus:border-indigo-500"
-              >
-                {availableSubtitles.map((sub) => (
-                  <option key={sub} value={sub.toLowerCase()}>
-                    {sub}
-                  </option>
-                ))}
-              </select>
+            {/* Subtitle language dropdown with toggle */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex-1">
+                <span className="text-sm font-semibold text-white block mb-1">Subtitle</span>
+                <select
+                  value={config.subtitle_lang}
+                  onChange={(e) => onChangeConfig({ ...config, subtitle_lang: e.target.value })}
+                  disabled={config.subtitles_enabled === false}
+                  className="w-full bg-[#131B2E] border border-[#1E293B] rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-500 capitalize disabled:opacity-40"
+                  aria-label="Subtitle language"
+                >
+                  {availableSubtitles.filter((s) => s.toLowerCase() !== 'none').map((sub) => (
+                    <option key={sub} value={sub.toLowerCase()}>
+                      {sub}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="pt-5">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChangeConfig({
+                      ...config,
+                      subtitles_enabled: config.subtitles_enabled === false ? true : false,
+                    })
+                  }
+                  aria-label="Toggle Subtitles"
+                  className={`w-12 h-6 rounded-full transition-colors relative p-0.5 ${
+                    config.subtitles_enabled !== false ? 'bg-indigo-600' : 'bg-slate-800 border border-slate-700'
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full bg-white transition-transform ${
+                      config.subtitles_enabled !== false ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
 
             {/* Embed Metadata toggle */}

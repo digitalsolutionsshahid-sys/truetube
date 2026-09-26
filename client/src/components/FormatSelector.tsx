@@ -6,7 +6,7 @@ import {
   Sliders,
   Copy,
   Check,
-  MoreVertical,
+  Plus,
   CheckCircle2,
 } from 'lucide-react';
 import type { MediaMetadata, FormatContainer } from '../types/media';
@@ -343,10 +343,11 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
             <button
               type="button"
               onClick={onOpenAdvancedOptions}
-              className="px-3.5 py-3.5 rounded-xl border border-[#1E293B] bg-slate-900/60 hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-              title="More Options"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-xl border border-[#1E293B] bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white text-xs sm:text-sm font-medium transition-colors"
+              aria-label="More options"
             >
-              <MoreVertical className="w-4 h-4" />
+              <Plus className="w-4 h-4 text-indigo-400" />
+              <span>More Options</span>
             </button>
           </div>
         </div>

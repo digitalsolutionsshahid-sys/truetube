@@ -239,63 +239,69 @@ export const FeatureSections: React.FC<FeatureSectionsProps> = ({ onScrollToTop 
         </div>
       </div>
 
-      {/* Frequently Asked Questions */}
-      <div id="faq" className="max-w-3xl mx-auto">
-        <div className="text-center mb-8">
-          <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
-            Frequently Asked Questions
-          </h3>
-          <p className="text-xs sm:text-sm text-slate-400">Everything you need to know</p>
-        </div>
+      {/* Frequently Asked Questions & Ready to download CTA Banner */}
+      <div id="faq" className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Column: FAQ Accordion (7 cols) */}
+        <div className="lg:col-span-7 space-y-3">
+          <div className="mb-6">
+            <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">
+              Frequently Asked Questions
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-400">Everything you need to know</p>
+          </div>
 
-        <div className="space-y-3">
-          {faqs.map((faq, idx) => {
-            const isOpen = openFaq === idx;
-            return (
-              <div
-                key={faq.q}
-                className="rounded-2xl bg-[#0D111D] border border-[#1E293B] overflow-hidden transition-all shadow-md"
-              >
-                <button
-                  type="button"
-                  onClick={() => toggleFaq(idx)}
-                  className="w-full flex items-center justify-between p-4 sm:p-5 text-left text-sm font-semibold text-slate-200 hover:text-white transition-colors"
+          <div className="space-y-3">
+            {faqs.map((faq, idx) => {
+              const isOpen = openFaq === idx;
+              return (
+                <div
+                  key={faq.q}
+                  className="rounded-2xl bg-[#0D111D] border border-[#1E293B] overflow-hidden transition-all shadow-md"
                 >
-                  <span>{faq.q}</span>
-                  <ChevronDown
-                    className={`w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ${
-                      isOpen ? 'rotate-180 text-indigo-400' : ''
-                    }`}
-                  />
-                </button>
-                {isOpen && (
-                  <div className="px-5 pb-5 text-xs sm:text-sm text-slate-400 leading-relaxed border-t border-[#1E293B]/60 pt-3">
-                    {faq.a}
-                  </div>
-                )}
-              </div>
-            );
-          })}
+                  <button
+                    type="button"
+                    onClick={() => toggleFaq(idx)}
+                    className="w-full flex items-center justify-between p-4 sm:p-5 text-left text-sm font-semibold text-slate-200 hover:text-white transition-colors"
+                  >
+                    <span>{faq.q}</span>
+                    <ChevronDown
+                      className={`w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ${
+                        isOpen ? 'rotate-180 text-indigo-400' : ''
+                      }`}
+                    />
+                  </button>
+                  {isOpen && (
+                    <div className="px-5 pb-5 text-xs sm:text-sm text-slate-400 leading-relaxed border-t border-[#1E293B]/60 pt-3">
+                      {faq.a}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
-      {/* Ready to download CTA Banner */}
-      <div className="p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-indigo-950/60 via-[#131B2E] to-purple-950/60 border border-indigo-500/30 text-center relative overflow-hidden shadow-2xl">
-        <div className="relative z-10 max-w-xl mx-auto">
-          <h3 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">
-            Ready to download?
-          </h3>
-          <p className="text-xs sm:text-sm text-slate-300 mb-6 leading-relaxed">
-            Join thousands of users who trust TrueTube for fast, clean, and reliable media processing.
-          </p>
-          <button
-            type="button"
-            onClick={onScrollToTop}
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-sm shadow-xl shadow-indigo-600/40 hover:shadow-indigo-600/60 transition-all active:scale-95"
-          >
-            <span>Start Downloading</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+        {/* Right Column: Ready to Download CTA Card (5 cols) matching Stitch */}
+        <div className="lg:col-span-5 p-7 sm:p-8 rounded-3xl bg-gradient-to-br from-indigo-950/60 via-[#0D111D] to-purple-950/60 border border-indigo-500/30 text-left relative overflow-hidden shadow-2xl flex flex-col justify-between min-h-[320px]">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+          <div>
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-white mb-3">
+              Ready to download?
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-300 mb-8 leading-relaxed">
+              Join thousands of users who trust TrueTube for their media needs.
+            </p>
+          </div>
+          <div>
+            <button
+              type="button"
+              onClick={onScrollToTop}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-sm shadow-xl shadow-indigo-600/40 hover:shadow-indigo-600/60 transition-all active:scale-95"
+            >
+              <span>Start Downloading</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

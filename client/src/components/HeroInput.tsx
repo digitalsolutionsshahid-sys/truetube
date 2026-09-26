@@ -118,10 +118,21 @@ export const HeroInput: React.FC<HeroInputProps> = ({
             </button>
           </div>
 
-          {/* Supported platform text */}
-          <p className="mt-4 text-xs text-slate-500 flex items-center justify-center gap-1.5 flex-wrap">
-            <span>Supports YouTube, TikTok, Vimeo, Twitter, Instagram and 1000+ more sites.</span>
-          </p>
+          {/* Sub-bar: Supported platforms & Paste from clipboard matching Stitch */}
+          <div className="mt-3 flex flex-col sm:flex-row items-center justify-between gap-2 px-2 text-xs">
+            <span className="text-slate-500 text-center sm:text-left">
+              Supports YouTube, TikTok, Vimeo, Twitter, Instagram and 1000+ more sites.
+            </span>
+            <button
+              type="button"
+              onClick={handlePaste}
+              className="flex items-center gap-1.5 text-slate-400 hover:text-indigo-300 hover:bg-slate-800/60 px-2.5 py-1 rounded-lg transition-colors flex-shrink-0"
+              aria-label="Paste from clipboard"
+            >
+              <Clipboard className="w-3.5 h-3.5" />
+              <span>Paste from clipboard</span>
+            </button>
+          </div>
         </div>
       </div>
     </section>

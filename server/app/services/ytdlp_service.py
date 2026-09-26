@@ -1,5 +1,7 @@
+import concurrent.futures
 import datetime
 import math
+import shutil
 from typing import Any, Optional
 from urllib.parse import urlparse
 
@@ -81,20 +83,31 @@ class YtDlpService:
             "noplaylist": True,
             "extract_flat": False,
             "skip_download": True,
+            "socket_timeout": 15,
+            "noprogress": True,
         }
-        if self.ffmpeg_path:
-            opts["ffmpeg_location"] = self.ffmpeg_path
+        ffmpeg_bin = self.ffmpeg_path or settings.FFMPEG_PATH or shutil.which("ffmpeg")
+        if ffmpeg_bin:
+            opts["ffmpeg_location"] = ffmpeg_bin
         return opts
 
-    def extract_info(self, url: str) -> MediaInfoResponse:
+    def extract_info(self, url: str, timeout: int = 30) -> MediaInfoResponse:
         """
-        Extracts and normalizes metadata and format trees for a validated URL.
+        Extracts and normalizes metadata and format trees for a validated URL with thread safety and timeout.
         """
         ydl_opts = self._get_base_opts()
 
-        try:
+        def _do_extract():
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
+                return ydl.extract_info(url, download=False)
+
+        try:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(_do_extract)
+                try:
+                    info = future.result(timeout=timeout)
+                except (TimeoutError, concurrent.futures.TimeoutError):
+                    raise MediaNetworkError(f"Media analysis timed out after {timeout} seconds.")
         except yt_dlp.utils.UnsupportedURL as e:
             raise UnsupportedMediaSourceError(f"TrueTube does not currently support this URL: {e}")
         except yt_dlp.utils.DownloadError as e:
@@ -107,6 +120,8 @@ class YtDlpService:
                 raise MediaNetworkError("Connection timed out or network error reaching media provider.")
             else:
                 raise YtDlpExtractionError(f"Could not extract media info: {e}")
+        except (UnsupportedMediaSourceError, InvalidMediaUrlError, MediaNetworkError, YtDlpExtractionError):
+            raise
         except Exception as e:
             raise YtDlpExtractionError(f"Unexpected error during media analysis: {e}")
 
@@ -136,47 +151,62 @@ class YtDlpService:
         audio_streams: list[AudioStreamItem] = []
 
         # Standard resolution height tiers to check
-        tiers = [2160, 1440, 1080, 720, 480, 360]
+        tiers = [2160, 1440, 1080, 720, 480, 360, 240, 144]
 
         best_video_size: Optional[int] = None
 
         for fmt in raw_formats:
             fmt_id = str(fmt.get("format_id", ""))
-            vcodec = fmt.get("vcodec", "none")
-            acodec = fmt.get("acodec", "none")
+            vcodec = fmt.get("vcodec", "none") or "none"
+            acodec = fmt.get("acodec", "none") or "none"
             ext = fmt.get("ext", "mp4")
             height = fmt.get("height") or 0
             width = fmt.get("width") or 0
             fps = int(fmt.get("fps") or 30)
-            tbr = fmt.get("tbr") or 0
+            tbr = fmt.get("tbr") or fmt.get("vbr") or 0
 
             filesize = fmt.get("filesize") or fmt.get("filesize_approx")
             if not filesize and duration > 0 and tbr > 0:
                 # Estimate size from duration and bitrate (kbit/s -> bytes)
                 filesize = int((tbr * 1024 / 8) * duration)
 
-            has_video = vcodec and vcodec != "none"
-            has_audio = acodec and acodec != "none"
+            has_video = vcodec != "none"
+            has_audio = acodec != "none"
 
             if has_video:
                 available_video_containers.add(ext.upper())
 
-                # Find nearest standard tier
+                # For vertical videos (Shorts, TikTok, Reels), the effective resolution
+                # is the shorter dimension (min of width and height)
+                effective_res = min(height, width) if (width > 0 and height > 0 and height > width) else height
+
+                # Match to nearest standard tier if close, or retain effective_res
                 closest_tier = None
                 for t in tiers:
-                    if abs(height - t) <= (30 if t <= 720 else 60):
+                    tolerance = 30 if t <= 720 else 60
+                    if abs(effective_res - t) <= tolerance:
                         closest_tier = t
                         break
 
+                if not closest_tier and effective_res >= 144:
+                    closest_tier = effective_res
+
                 if closest_tier:
-                    label = f"Best ({closest_tier}p)" if closest_tier >= 2160 else f"{closest_tier}p"
-                    if closest_tier == 2160:
+                    if closest_tier >= 2160:
                         label = "Best (4K)"
+                    elif closest_tier == 1440:
+                        label = "2K (1440p)"
+                    elif closest_tier == 1080:
+                        label = "1080p (Full HD)"
+                    elif closest_tier == 720:
+                        label = "720p (HD)"
+                    else:
+                        label = f"{closest_tier}p"
 
                     res_str = f"{width}x{height}" if width and height else f"{closest_tier}p"
                     approx_str = f"~{format_bytes(filesize)}" if filesize else f"~{closest_tier * 2} MB"
 
-                    # If tier already present, prefer mp4 or higher bitrate
+                    # If tier already present, prefer mp4 or higher bitrate/filesize
                     existing = video_formats_map.get(closest_tier)
                     should_replace = False
                     if not existing:
@@ -195,18 +225,18 @@ class YtDlpService:
                             height=closest_tier,
                             fps=fps,
                             container="mp4" if ext in ("mp4", "m4v") else ext,
-                            codec="H.264" if "avc" in vcodec.lower() or "h264" in vcodec.lower() else vcodec[:10],
+                            codec="H.264" if ("avc" in vcodec.lower() or "h264" in vcodec.lower()) else vcodec[:10],
                             approx_size_str=approx_str,
                             has_video=True,
                             has_audio=has_audio,
                             filesize=filesize,
-                            is_recommended=(closest_tier == 2160 or (closest_tier == 1080 and 2160 not in video_formats_map)),
+                            is_recommended=False,
                         )
 
             elif has_audio and not has_video:
                 # Audio-only stream
                 available_audio_containers.add(ext.upper())
-                abr = int(fmt.get("abr") or 128)
+                abr = int(fmt.get("abr") or fmt.get("tbr") or 128)
                 audio_streams.append(
                     AudioStreamItem(
                         id=f"audio_{fmt_id}",
@@ -240,21 +270,30 @@ class YtDlpService:
                 )
             )
 
-        # Ensure top item has is_recommended = True
-        if sorted_formats:
-            sorted_formats[0].is_recommended = True
-            best_video_size = sorted_formats[0].filesize
+        # Ensure all are False first
+        for f in sorted_formats:
+            f.is_recommended = False
 
-        # Normalize audio streams
-        if not audio_streams:
+        # Set exactly one recommended format: prefer 1080p if available, else highest quality
+        if sorted_formats:
+            rec_candidate = next((f for f in sorted_formats if f.height == 1080), sorted_formats[0])
+            rec_candidate.is_recommended = True
+            best_video_size = rec_candidate.filesize or sorted_formats[0].filesize
+
+        # Normalize and deduplicate audio streams
+        if audio_streams:
+            deduped_audio: dict[str, AudioStreamItem] = {}
+            for a in sorted(audio_streams, key=lambda x: int(x.bitrate.split()[0]) if x.bitrate.split()[0].isdigit() else 0, reverse=True):
+                if a.format not in deduped_audio:
+                    deduped_audio[a.format] = a
+            audio_streams = list(deduped_audio.values())
+            audio_streams[0].is_default = True
+        else:
             audio_streams = [
                 AudioStreamItem(id="audio_default", format_id="bestaudio", format="AAC", bitrate="128 kbps", is_default=True),
                 AudioStreamItem(id="audio_opus", format_id="bestaudio", format="Opus", bitrate="160 kbps"),
                 AudioStreamItem(id="audio_mp3", format_id="bestaudio", format="MP3", bitrate="320 kbps"),
             ]
-        else:
-            # Sort audio streams descending by bitrate and mark first as default
-            audio_streams[0].is_default = True
 
         # Process subtitles
         raw_subs = info.get("subtitles") or {}

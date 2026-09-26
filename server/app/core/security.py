@@ -33,6 +33,18 @@ BLOCKED_NETWORKS = [
     ipaddress.ip_network("fe80::/10"),
 ]
 
+# Dangerous ports commonly used for internal services, management, or databases
+DANGEROUS_PORTS = {
+    21, 22, 23, 25, 53, 69, 110, 135, 137, 138, 139, 143, 445,
+    1433, 1521, 2375, 2376, 3306, 3389, 5432, 5900, 6379, 9200, 11211, 27017,
+}
+
+WINDOWS_RESERVED_NAMES = {
+    "CON", "PRN", "AUX", "NUL",
+    "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+    "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9",
+}
+
 def is_ip_blocked(ip_obj: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     """Check if IP address is private, loopback, link-local, or reserved."""
     if (
@@ -52,29 +64,61 @@ def is_ip_blocked(ip_obj: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool
 
 def validate_and_sanitize_url(raw_url: str) -> str:
     """
-    Validates URL scheme, domain, and prevents SSRF attacks.
-    Returns cleaned URL or raises SecurityValidationError.
+    Validates URL scheme, domain, port, and prevents SSRF attacks.
+    Returns cleaned URL or raises SecurityValidationError or SSRFBlockedError.
     """
     if not raw_url or not isinstance(raw_url, str):
         raise SecurityValidationError("URL cannot be empty.")
 
     clean_url = raw_url.strip()
 
-    # Disallow URLs with embedded credentials (e.g. http://user:pass@example.com)
     parsed = urlparse(clean_url)
 
     if parsed.scheme.lower() not in ("http", "https"):
         raise SecurityValidationError(f"Invalid URL scheme '{parsed.scheme}'. Only HTTP and HTTPS are permitted.")
 
+    # Disallow URLs with embedded credentials (e.g. http://user:pass@example.com)
+    if parsed.username or parsed.password:
+        raise SecurityValidationError("URLs with embedded credentials (user:password@) are strictly prohibited.")
+
     hostname = parsed.hostname
     if not hostname:
         raise SecurityValidationError("URL must include a valid hostname.")
 
+    # Block disallowed ports
+    if parsed.port and parsed.port in DANGEROUS_PORTS:
+        raise SecurityValidationError(f"Port {parsed.port} is blocked for security reasons.")
+
     hostname_lower = hostname.lower()
 
-    # Block obvious local keywords
-    if hostname_lower in ("localhost", "127.0.0.1", "::1", "0.0.0.0"):
+    # Block obvious local keywords and special TLDs
+    if hostname_lower in ("localhost", "127.0.0.1", "::1", "0.0.0.0", "::", "localhost.localdomain") or \
+       hostname_lower.endswith(".localhost") or \
+       hostname_lower.endswith(".local") or \
+       hostname_lower.endswith(".internal"):
         raise SSRFBlockedError("Access to local network resources is strictly prohibited.")
+
+    # Check for integer/hex IPv4 representation (e.g. http://2130706433 or 0x7f000001)
+    ip_int = None
+    if hostname_lower.isdigit():
+        try:
+            ip_int = int(hostname_lower)
+        except ValueError:
+            pass
+    elif hostname_lower.startswith("0x"):
+        try:
+            ip_int = int(hostname_lower, 16)
+        except ValueError:
+            pass
+
+    if ip_int is not None and 0 <= ip_int <= 0xFFFFFFFF:
+        try:
+            ip_obj = ipaddress.IPv4Address(ip_int)
+            if is_ip_blocked(ip_obj):
+                raise SSRFBlockedError(f"Access to private/loopback IP {ip_obj} is prohibited.")
+            return clean_url
+        except ipaddress.AddressValueError:
+            pass
 
     # Check if hostname is an IP literal
     try:
@@ -86,23 +130,31 @@ def validate_and_sanitize_url(raw_url: str) -> str:
         # Hostname is a domain name, not an IP literal
         pass
 
-    # Resolve domain to IP to detect DNS rebinding / internal routing
+    # Resolve domain to IP to detect DNS rebinding / internal routing with strict timeout
     try:
-        addr_info = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
-        for _, _, _, _, sockaddr in addr_info:
-            ip_str = sockaddr[0]
-            ip_obj = ipaddress.ip_address(ip_str)
-            if is_ip_blocked(ip_obj):
-                raise SSRFBlockedError(f"Domain resolves to private/loopback IP {ip_str}, request denied.")
-    except socket.gaierror:
-        # If DNS resolution fails here, yt-dlp might fail or retry; allow standard domain validation to proceed
+        orig_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(3.0)
+        try:
+            addr_info = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+            for _, _, _, _, sockaddr in addr_info:
+                ip_str = sockaddr[0]
+                ip_obj = ipaddress.ip_address(ip_str)
+                if is_ip_blocked(ip_obj):
+                    raise SSRFBlockedError(f"Domain resolves to private/loopback IP {ip_str}, request denied.")
+        finally:
+            socket.setdefaulttimeout(orig_timeout)
+    except SSRFBlockedError:
+        raise
+    except (socket.gaierror, socket.herror, TimeoutError, OSError, UnicodeError):
+        # Allow extraction flow to proceed or fail downstream gracefully
         pass
 
     return clean_url
 
 def sanitize_filename(filename: str, fallback_ext: str = "mp4") -> str:
     """
-    Sanitizes filename removing directory traversal characters and invalid OS symbols.
+    Sanitizes filename removing directory traversal characters, invalid OS symbols,
+    and Windows reserved device names (CON, NUL, AUX, etc.).
     """
     if not filename:
         return f"truetube_download.{fallback_ext}"
@@ -126,6 +178,11 @@ def sanitize_filename(filename: str, fallback_ext: str = "mp4") -> str:
 
     if not name:
         name = "truetube_media"
+
+    # Check for Windows reserved names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
+    stem = name.split(".")[0].upper()
+    if stem in WINDOWS_RESERVED_NAMES:
+        name = f"truetube_{name}"
 
     # Truncate to maximum 200 characters to prevent filesystem limits
     if len(name) > 200:

@@ -1,4 +1,5 @@
 import shutil
+import threading
 import yt_dlp.version
 from fastapi import APIRouter, HTTPException, status
 
@@ -19,16 +20,43 @@ from app.services.ytdlp_service import (
 
 router = APIRouter(prefix="/api")
 
+class ConcurrencyLimiter:
+    """Thread-safe concurrency governor tracking active tasks and enforcing capacity limits."""
+    def __init__(self, max_concurrent: int):
+        self.semaphore = threading.Semaphore(max_concurrent)
+        self._active_count = 0
+        self._lock = threading.Lock()
+
+    def acquire(self, timeout: float = 5.0) -> bool:
+        acquired = self.semaphore.acquire(timeout=timeout)
+        if acquired:
+            with self._lock:
+                self._active_count += 1
+        return acquired
+
+    def release(self):
+        with self._lock:
+            if self._active_count > 0:
+                self._active_count -= 1
+        self.semaphore.release()
+
+    @property
+    def active_count(self) -> int:
+        with self._lock:
+            return self._active_count
+
+concurrency_limiter = ConcurrencyLimiter(settings.MAX_CONCURRENT_JOBS)
+
 @router.get("/health", response_model=HealthResponse)
 def get_health():
-    """Returns system status, yt-dlp version, and FFmpeg detection info."""
+    """Returns system status, yt-dlp version, active jobs, and FFmpeg detection info."""
     ffmpeg_bin = settings.FFMPEG_PATH or shutil.which("ffmpeg") or ""
     return HealthResponse(
         status="ok",
         ytdlp_version=getattr(yt_dlp.version, "__version__", "unknown"),
         ffmpeg_available=bool(ffmpeg_bin),
         ffmpeg_path=ffmpeg_bin,
-        active_jobs=0,
+        active_jobs=concurrency_limiter.active_count,
         temp_dir=str(settings.TEMP_STORAGE_PATH),
     )
 
@@ -51,7 +79,16 @@ def analyze_media(req: AnalyzeRequest):
             detail={"error": str(e), "code": "INVALID_URL"},
         )
 
-    # 2. Extract Metadata via yt-dlp engine
+    # 2. Extract Metadata via yt-dlp engine with concurrency limiting and timeout
+    if not concurrency_limiter.acquire(timeout=5.0):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail={
+                "error": "Server is currently at maximum capacity. Please retry shortly.",
+                "code": "NETWORK_ERROR",
+            },
+        )
+
     try:
         media_info = ytdlp_service.extract_info(clean_url)
         return media_info
@@ -62,7 +99,7 @@ def analyze_media(req: AnalyzeRequest):
         )
     except UnsupportedMediaSourceError as e:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={"error": str(e), "code": "UNSUPPORTED_SOURCE"},
         )
     except MediaNetworkError as e:
@@ -83,3 +120,5 @@ def analyze_media(req: AnalyzeRequest):
                 "code": "DOWNLOAD_FAILED",
             },
         )
+    finally:
+        concurrency_limiter.release()

@@ -127,7 +127,7 @@ class DownloadPipeline:
         req = job.request
         temp_dir = str(job.temp_dir)
 
-        # Base yt-dlp configuration
+        # Base yt-dlp configuration with high-speed multi-threaded acceleration
         ydl_opts: dict[str, Any] = {
             "quiet": True,
             "no_warnings": True,
@@ -136,6 +136,11 @@ class DownloadPipeline:
             "progress_hooks": [self._make_progress_hook(job)],
             "postprocessor_hooks": [self._make_postprocessor_hook(job)],
             "socket_timeout": 30,
+            # High-speed download acceleration
+            "concurrent_fragment_downloads": 8,  # Download DASH/HLS stream fragments across 8 parallel threads
+            "buffersize": 1024 * 1024,           # 1MB buffer size for fast I/O throughput
+            "http_chunk_size": 10485760,         # 10MB chunk size to avoid provider bandwidth throttling
+            "format_sort": ["res", "ext:mp4:m4a"], # Prefer native MP4/M4A to enable instant stream copy without CPU-heavy re-encoding
         }
 
         if settings.FFMPEG_PATH:

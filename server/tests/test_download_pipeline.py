@@ -239,4 +239,15 @@ def test_float_byte_counts_validation_immunity():
     assert isinstance(resp.downloaded_bytes, int)
     assert resp.downloaded_bytes == 1048577
 
+def test_direct_stream_download_validations():
+    """Verify that /api/download/direct rejects SSRF and invalid URLs before processing."""
+    # SSRF test
+    resp_ssrf = client.get("/api/download/direct?url=http://127.0.0.1:8000/secret")
+    assert resp_ssrf.status_code == 403
+
+    # Invalid URL test
+    resp_inv = client.get("/api/download/direct?url=ftp://invalid-url.com")
+    assert resp_inv.status_code == 400
+
+
 

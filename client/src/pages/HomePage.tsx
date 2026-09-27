@@ -1,10 +1,8 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { HeroInput } from '../components/HeroInput';
 import { AnalyzingState } from '../components/AnalyzingState';
 import { MediaPreview } from '../components/MediaPreview';
 import { FormatSelector } from '../components/FormatSelector';
-import { DownloadingState } from '../components/DownloadingState';
-import { CompletedState } from '../components/CompletedState';
 import { AdvancedOptionsDrawer } from '../components/AdvancedOptionsDrawer';
 import { RecentDownloads } from '../components/RecentDownloads';
 import { ErrorCard } from '../components/ErrorCards';
@@ -12,7 +10,6 @@ import type { ErrorType } from '../components/ErrorCards';
 import { ThreeDScene } from '../components/ThreeDScene';
 import type {
   MediaMetadata,
-  DownloadProgress,
   AdvancedOptionsConfig,
   RecentDownloadItem,
   FormatContainer,
@@ -20,10 +17,7 @@ import type {
 import { MOCK_MEDIA_METADATA, MOCK_RECENT_DOWNLOADS } from '../mockData';
 import {
   analyzeMedia,
-  createDownloadJob,
-  cancelDownloadJob,
-  getDownloadFileUrl,
-  subscribeJobProgress,
+  getDirectDownloadUrl,
 } from '../services/api';
 
 const STORAGE_KEY = 'truetube_recent_downloads_v1';
@@ -39,28 +33,13 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
     | 'IDLE'
     | 'ANALYZING'
     | 'FORMAT_SELECTION'
-    | 'DOWNLOADING'
-    | 'COMPLETED'
     | 'RECENT_DOWNLOADS'
     | 'ERROR'
   >('IDLE');
 
-  // Media & Job State
+  // Media State
   const [media, setMedia] = useState<MediaMetadata>(MOCK_MEDIA_METADATA);
-  const [currentJobId, setCurrentJobId] = useState<string>('');
-  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress>({
-    status: 'DOWNLOADING',
-    progress_percent: 62,
-    speed_str: '7.4 MB/s',
-    eta_str: '00:32',
-    downloaded_bytes: 760000000,
-    total_bytes: 1200000000,
-    current_stage: 'Downloading...',
-    filename: 'video_download.mp4',
-    file_size_str: '1.2 GB',
-  });
-
-  const sseUnsubscribeRef = useRef<(() => void) | null>(null);
+  const [isDownloadingInChrome, setIsDownloadingInChrome] = useState(false);
 
   // Advanced Options State
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
@@ -100,9 +79,9 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        addToast('info', 'Downloading media', item.title);
+        addToast('info', 'Downloading media in Chrome...', item.title);
       } else {
-        addToast('warning', 'File expired', 'Please re-analyze the video to download again.');
+        addToast('warning', 'Link expired', 'Please re-analyze the video to download again.');
       }
     },
     [addToast]
@@ -115,15 +94,6 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
       // Ignore localStorage issues
     }
   }, [recentDownloads]);
-
-  // Clean up any active SSE on unmount
-  useEffect(() => {
-    return () => {
-      if (sseUnsubscribeRef.current) {
-        sseUnsubscribeRef.current();
-      }
-    };
-  }, []);
 
   // Error State
   const [errorType, setErrorType] = useState<ErrorType>('INVALID_URL');
@@ -153,146 +123,58 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
     }
   };
 
-  const handleStartDownload = async (options: {
+  const handleStartDownload = (options: {
     format: FormatContainer;
     qualityId: string;
     audioStreamId: string;
     audioOnly: boolean;
   }) => {
-    setAppState('DOWNLOADING');
-
-    // Initial state setup
-    setDownloadProgress({
-      status: 'QUEUED',
-      progress_percent: 2.0,
-      speed_str: 'Starting...',
-      eta_str: '--:--',
-      downloaded_bytes: 0,
-      total_bytes: 0,
-      current_stage: 'Queuing job and connecting to media stream...',
-      filename: `${media.title.replace(/[\s/]/g, '_')}.${options.format}`,
-      file_size_str: 'Calculating...',
-    });
+    setIsDownloadingInChrome(true);
+    addToast('info', 'Starting Chrome Download...', 'Connecting directly to media stream.');
 
     try {
-      if (sseUnsubscribeRef.current) {
-        sseUnsubscribeRef.current();
-      }
-
-      // 1. Submit download job to real backend
-      const jobResp = await createDownloadJob({
+      const directDownloadUrl = getDirectDownloadUrl({
         url: media.url,
         format_id: options.qualityId,
-        container: options.format,
+        container: options.audioOnly ? options.format : 'mp4',
         audio_stream_id: options.audioStreamId,
         audio_only: options.audioOnly || advancedConfig.audio_only,
         subtitles: advancedConfig.subtitles_enabled ? advancedConfig.subtitle_lang : undefined,
         embed_metadata: advancedConfig.embed_metadata,
         embed_thumbnail: advancedConfig.embed_thumbnail,
-        filename_template: advancedConfig.filename_template,
-        quality_preference: advancedConfig.quality_preference,
       });
 
-      const jobId = jobResp.job_id || (jobResp as any).id;
-      setCurrentJobId(jobId);
-      addToast('info', 'Download queued', 'Connecting to media source...');
-
-      // 2. Subscribe to real-time Server-Sent Events stream
-      const unsubscribe = subscribeJobProgress(
-        jobId,
-        (progress) => {
-          setDownloadProgress((prev) => ({
-            ...prev,
-            ...progress,
-            progress_percent: progress.progress_percent ?? prev.progress_percent,
-          }));
-        },
-        (finalProgress) => {
-          const fileDownloadUrl = getDownloadFileUrl(jobId);
-
-          // Automatically trigger download directly into Chrome
-          try {
-            const a = document.createElement('a');
-            a.href = fileDownloadUrl;
-            a.download = finalProgress.filename || `${media.title.replace(/[\s/]/g, '_')}.${options.format}`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-          } catch (e) {
-            console.warn('Auto-download trigger notice:', e);
-          }
-
-          // Add to recent downloads
-          const newItem: RecentDownloadItem = {
-            id: `rec_${Date.now()}`,
-            title: media.title,
-            thumbnail: media.thumbnail,
-            format: options.format.toUpperCase(),
-            quality: options.audioOnly ? 'Audio' : options.qualityId.toUpperCase(),
-            file_size: finalProgress.file_size_str || 'Downloaded',
-            timestamp: 'Just now',
-            status: 'Completed',
-            file_url: fileDownloadUrl,
-          };
-
-          setRecentDownloads((prev) => [newItem, ...prev.slice(0, 19)]);
-          setDownloadProgress((prev) => ({
-            ...prev,
-            ...finalProgress,
-            status: 'COMPLETED',
-            progress_percent: 100,
-          }));
-          setAppState('COMPLETED');
-          addToast('success', 'Download Complete!', 'Saved directly to your browser.');
-        },
-        (errorMsg) => {
-          setErrorType('DOWNLOAD_FAILED');
-          setErrorMessage(errorMsg || 'Download interrupted or failed.');
-          setAppState('ERROR');
-          addToast('error', 'Download interrupted', errorMsg);
-        }
-      );
-
-      sseUnsubscribeRef.current = unsubscribe;
-    } catch (err: any) {
-      console.warn('Real API job creation failed:', err);
-      setErrorType(err.code || 'DOWNLOAD_FAILED');
-      setErrorMessage(err.message || 'Failed to submit download job to server.');
-      setAppState('ERROR');
-      addToast('error', 'Job submission failed', err.message);
-    }
-  };
-
-  const handleCancelDownload = async () => {
-    if (currentJobId) {
-      await cancelDownloadJob(currentJobId);
-      addToast('info', 'Download cancelled', 'Cleaned up temporary stream files.');
-    }
-    if (sseUnsubscribeRef.current) {
-      sseUnsubscribeRef.current();
-      sseUnsubscribeRef.current = null;
-    }
-    setAppState('FORMAT_SELECTION');
-  };
-
-  const handleDownloadFile = () => {
-    if (currentJobId) {
-      const fileUrl = getDownloadFileUrl(currentJobId);
+      // Trigger native browser download directly into Chrome
       const a = document.createElement('a');
-      a.href = fileUrl;
-      a.download = downloadProgress.filename || 'download';
+      a.href = directDownloadUrl;
+      a.download = '';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      addToast('success', 'Saving file...', downloadProgress.filename);
-    } else {
-      addToast('info', 'File ready', 'Download triggered.');
-    }
-  };
 
-  const handleDownloadAnother = () => {
-    setUrl('');
-    setAppState('IDLE');
+      // Add to recent downloads history
+      const newItem: RecentDownloadItem = {
+        id: `rec_${Date.now()}`,
+        title: media.title,
+        thumbnail: media.thumbnail,
+        format: (options.audioOnly ? options.format : 'mp4').toUpperCase(),
+        quality: options.audioOnly ? 'Audio' : options.qualityId.toUpperCase(),
+        file_size: 'Chrome Download',
+        timestamp: 'Just now',
+        status: 'Completed',
+        file_url: directDownloadUrl,
+      };
+
+      setRecentDownloads((prev) => [newItem, ...prev.slice(0, 19)]);
+      addToast('success', 'Download Started in Chrome!', 'Check your browser downloads tray.');
+    } catch (err: any) {
+      console.warn('Direct download trigger error:', err);
+      addToast('error', 'Download Failed', err.message || 'Could not start Chrome download.');
+    } finally {
+      setTimeout(() => {
+        setIsDownloadingInChrome(false);
+      }, 1500);
+    }
   };
 
   return (
@@ -325,11 +207,25 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
 
       {appState === 'FORMAT_SELECTION' && (
         <div className="space-y-8 animate-fadeIn">
+          <div className="max-w-5xl mx-auto px-4 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => {
+                setUrl('');
+                setAppState('IDLE');
+              }}
+              className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors cursor-pointer"
+            >
+              ← Paste another link
+            </button>
+          </div>
+
           <MediaPreview media={media} />
 
           <FormatSelector
             key={media.url}
             media={media}
+            isDownloading={isDownloadingInChrome}
             onStartDownload={handleStartDownload}
             onOpenAdvancedOptions={() => setIsAdvancedOpen(true)}
           />
@@ -343,28 +239,12 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
         </div>
       )}
 
-      {appState === 'DOWNLOADING' && (
-        <DownloadingState
-          media={media}
-          progress={downloadProgress}
-          onCancel={handleCancelDownload}
-        />
-      )}
-
-      {appState === 'COMPLETED' && (
-        <CompletedState
-          media={media}
-          progress={downloadProgress}
-          onDownloadFile={handleDownloadFile}
-          onDownloadAnother={handleDownloadAnother}
-        />
-      )}
-
       {appState === 'RECENT_DOWNLOADS' && (
         <div className="max-w-4xl mx-auto px-4 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-white">Full Download History</h2>
             <button
+              type="button"
               onClick={() => setAppState('IDLE')}
               className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
             >

@@ -70,6 +70,8 @@ export const HeroInput: React.FC<HeroInputProps> = ({
             {/* Input field */}
             <input
               type="url"
+              autoComplete="off"
+              name="video_url_input"
               value={url}
               onChange={(e) => onChangeUrl(e.target.value)}
               onFocus={() => setIsFocused(true)}

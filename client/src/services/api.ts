@@ -105,6 +105,28 @@ export function getDownloadFileUrl(jobId: string): string {
   return `${API_BASE}/jobs/${jobId}/file`;
 }
 
+export function getDirectDownloadUrl(options: {
+  url: string;
+  format_id?: string;
+  container: string;
+  audio_stream_id?: string;
+  audio_only?: boolean;
+  subtitles?: string;
+  embed_metadata?: boolean;
+  embed_thumbnail?: boolean;
+}): string {
+  const params = new URLSearchParams();
+  params.set('url', options.url);
+  if (options.format_id) params.set('format_id', options.format_id);
+  if (options.container) params.set('container', options.container);
+  if (options.audio_stream_id) params.set('audio_stream_id', options.audio_stream_id);
+  if (options.audio_only) params.set('audio_only', 'true');
+  if (options.subtitles) params.set('subtitles', options.subtitles);
+  if (options.embed_metadata !== undefined) params.set('embed_metadata', String(options.embed_metadata));
+  if (options.embed_thumbnail !== undefined) params.set('embed_thumbnail', String(options.embed_thumbnail));
+  return `${API_BASE}/download/direct?${params.toString()}`;
+}
+
 export function subscribeJobProgress(
   jobId: string,
   onProgress: (progress: DownloadProgress) => void,

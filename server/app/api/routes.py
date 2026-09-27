@@ -301,3 +301,78 @@ def download_completed_file(job_id: str):
         filename=safe_name,
         background=cleanup_task,
     )
+
+@router.get("/download/direct")
+def direct_stream_download(
+    url: str,
+    format_id: str = "best",
+    container: str = "mp4",
+    audio_stream_id: str | None = None,
+    audio_only: bool = False,
+    subtitles: str | None = None,
+    embed_metadata: bool = True,
+    embed_thumbnail: bool = False,
+):
+    """
+    Direct external download endpoint for Chrome.
+    Validates media URL, executes download/merge, and delivers file directly to Chrome
+    with immediate server storage cleanup.
+    """
+    try:
+        clean_url = validate_and_sanitize_url(url)
+    except SSRFBlockedError as e:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={"error": str(e), "code": "UNSUPPORTED_SOURCE"},
+        )
+    except SecurityValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={"error": str(e), "code": "INVALID_URL"},
+        )
+
+    req = DownloadJobRequest(
+        url=clean_url,
+        format_id=format_id,
+        container="mp4" if not audio_only else container,
+        audio_stream_id=audio_stream_id,
+        audio_only=audio_only,
+        subtitles=subtitles,
+        embed_metadata=embed_metadata,
+        embed_thumbnail=embed_thumbnail,
+    )
+
+    job = job_manager.create_job(req)
+    download_pipeline._run_job(job)
+
+    if job.status != "COMPLETED" or not job.file_path or not job.file_path.exists():
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": job.error or "Media download processing failed.",
+                "code": job.error_code or "DOWNLOAD_FAILED",
+            },
+        )
+
+    safe_name = sanitize_filename(job.filename or job.file_path.name)
+    ext = job.file_path.suffix.lower()
+    mime_types = {
+        ".mp4": "video/mp4",
+        ".webm": "video/webm",
+        ".mkv": "video/x-matroska",
+        ".avi": "video/x-msvideo",
+        ".mp3": "audio/mpeg",
+        ".m4a": "audio/mp4",
+        ".wav": "audio/wav",
+        ".opus": "audio/opus",
+    }
+    media_type = mime_types.get(ext, "application/octet-stream")
+    cleanup_task = BackgroundTask(safe_rmtree, job.temp_dir) if job.temp_dir else None
+
+    return FileResponse(
+        path=str(job.file_path),
+        media_type=media_type,
+        filename=safe_name,
+        background=cleanup_task,
+    )
+

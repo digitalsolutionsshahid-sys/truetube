@@ -8,11 +8,13 @@ import {
   Check,
   Plus,
   CheckCircle2,
+  Loader2,
 } from 'lucide-react';
 import type { MediaMetadata, FormatContainer } from '../types/media';
 
 interface FormatSelectorProps {
   media: MediaMetadata;
+  isDownloading?: boolean;
   onStartDownload: (options: {
     format: FormatContainer;
     qualityId: string;
@@ -24,6 +26,7 @@ interface FormatSelectorProps {
 
 export const FormatSelector: React.FC<FormatSelectorProps> = ({
   media,
+  isDownloading = false,
   onStartDownload,
   onOpenAdvancedOptions,
 }) => {
@@ -327,10 +330,24 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
           <button
             type="button"
             onClick={handleDownload}
-            className="w-full sm:flex-1 flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-sm sm:text-base shadow-xl shadow-indigo-600/30 hover:shadow-indigo-600/50 transition-all active:scale-[0.98]"
+            disabled={isDownloading}
+            className={`w-full sm:flex-1 flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-xl text-white font-semibold text-sm sm:text-base shadow-xl transition-all active:scale-[0.98] ${
+              isDownloading
+                ? 'bg-indigo-700/70 cursor-wait'
+                : 'bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 hover:from-indigo-500 hover:to-violet-500 shadow-indigo-600/30 hover:shadow-indigo-600/50 cursor-pointer'
+            }`}
           >
-            <Download className="w-5 h-5" />
-            <span>Download</span>
+            {isDownloading ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin text-white" />
+                <span>Starting Chrome Download...</span>
+              </>
+            ) : (
+              <>
+                <Download className="w-5 h-5" />
+                <span>Download</span>
+              </>
+            )}
           </button>
 
           <div className="flex items-center gap-2 w-full sm:w-auto">

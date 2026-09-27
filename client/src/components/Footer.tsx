@@ -1,21 +1,27 @@
 import React from 'react';
 import { Zap, Sparkles, MessageCircle, MapPin, Heart } from 'lucide-react';
+import { useRouter } from '../router/RouterContext';
 
 export const Footer: React.FC = () => {
+  const { navigateTo } = useRouter();
+
   return (
     <footer className="w-full border-t border-[#1E293B] bg-[#07090E] pt-12 pb-8 mt-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row items-center justify-between gap-6 pb-8 border-b border-[#1E293B]">
           {/* Logo & Tagline */}
           <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-600/30">
+            <button
+              onClick={() => navigateTo('home')}
+              className="flex items-center gap-2 cursor-pointer group text-left"
+            >
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-md shadow-indigo-600/30 group-hover:scale-105 transition-transform">
                 <Zap className="w-4 h-4 text-white fill-white/30" />
               </div>
               <span className="text-lg font-bold text-white font-mono">
                 True<span className="text-indigo-400">Tube</span>
               </span>
-            </div>
+            </button>
             <span className="hidden sm:inline text-slate-600">•</span>
             <span className="text-xs text-slate-400">
               Download the web. Your way.
@@ -48,17 +54,32 @@ export const Footer: React.FC = () => {
             </a>
           </div>
 
-          {/* Links */}
+          {/* Page Links */}
           <div className="flex items-center flex-wrap justify-center gap-5 text-xs text-slate-400">
-            <a href="#about" className="hover:text-white transition-colors">
-              About Academy
-            </a>
-            <a href="#features" className="hover:text-white transition-colors">
+            <button
+              onClick={() => navigateTo('home')}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
+              Home
+            </button>
+            <button
+              onClick={() => navigateTo('features')}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
               Features
-            </a>
-            <a href="#faq" className="hover:text-white transition-colors">
+            </button>
+            <button
+              onClick={() => navigateTo('faq')}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
               FAQ
-            </a>
+            </button>
+            <button
+              onClick={() => navigateTo('about')}
+              className="hover:text-white transition-colors cursor-pointer"
+            >
+              About Academy
+            </button>
             <a
               href="https://web.facebook.com/TrueLifeAcademyOfficial/"
               target="_blank"
@@ -88,7 +109,10 @@ export const Footer: React.FC = () => {
 
         {/* Legal Disclaimer & Copyright */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500 text-center sm:text-left">
-          <p>© {new Date().getFullYear()} TrueTube. All rights reserved. Made with <Heart className="w-3 h-3 inline text-red-500 fill-red-500" /> by TrueLife Academy.</p>
+          <p>
+            © {new Date().getFullYear()} TrueTube. All rights reserved. Made with{' '}
+            <Heart className="w-3 h-3 inline text-red-500 fill-red-500" /> by TrueLife Academy.
+          </p>
           <p className="max-w-md">
             Please respect creator copyright. TrueTube is intended for personal media backups and legally authorized downloads.
           </p>

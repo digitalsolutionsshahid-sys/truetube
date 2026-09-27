@@ -1,18 +1,24 @@
 import React from 'react';
 import { Zap, Sparkles, MessageCircle } from 'lucide-react';
+import { useRouter } from '../router/RouterContext';
+import { AppRoute } from '../router/routes';
 
-interface NavbarProps {
-  onNavClick?: (sectionId: string) => void;
-  onReset?: () => void;
-}
+export const Navbar: React.FC = () => {
+  const { route, navigateTo } = useRouter();
 
-export const Navbar: React.FC<NavbarProps> = ({ onNavClick, onReset }) => {
+  const navItems: { id: AppRoute; label: string }[] = [
+    { id: 'home', label: 'Home' },
+    { id: 'features', label: 'Features' },
+    { id: 'faq', label: 'FAQ' },
+    { id: 'about', label: 'About' },
+  ];
+
   return (
     <header className="sticky top-0 z-40 w-full border-b border-[#1E293B] bg-[#07090E]/85 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         {/* Brand / Logo */}
         <button
-          onClick={onReset}
+          onClick={() => navigateTo('home')}
           className="flex items-center gap-2.5 group text-left cursor-pointer transition-transform active:scale-95"
           aria-label="TrueTube Home"
         >
@@ -24,38 +30,24 @@ export const Navbar: React.FC<NavbarProps> = ({ onNavClick, onReset }) => {
           </span>
         </button>
 
-        {/* Center Navigation Links */}
-        <nav className="hidden md:flex items-center space-x-1 lg:space-x-2 text-sm font-medium text-slate-400">
-          <button
-            onClick={() => onNavClick?.('home')}
-            className="px-3.5 py-1.5 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors"
-          >
-            Home
-          </button>
-          <button
-            onClick={() => onNavClick?.('features')}
-            className="px-3.5 py-1.5 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors"
-          >
-            Features
-          </button>
-          <button
-            onClick={() => onNavClick?.('supported')}
-            className="px-3.5 py-1.5 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors"
-          >
-            Supported
-          </button>
-          <button
-            onClick={() => onNavClick?.('faq')}
-            className="px-3.5 py-1.5 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors"
-          >
-            FAQ
-          </button>
-          <button
-            onClick={() => onNavClick?.('about')}
-            className="px-3.5 py-1.5 rounded-lg hover:text-white hover:bg-slate-800/60 transition-colors"
-          >
-            About
-          </button>
+        {/* Center Navigation Links (Supported button removed) */}
+        <nav className="hidden md:flex items-center space-x-1 lg:space-x-2 text-sm font-medium">
+          {navItems.map((item) => {
+            const isActive = route === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => navigateTo(item.id)}
+                className={`px-3.5 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-indigo-600/20 text-indigo-300 border border-indigo-500/40 shadow-sm shadow-indigo-500/10 font-semibold'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
         </nav>
 
         {/* Right CTA / TrueLife Academy & WhatsApp */}

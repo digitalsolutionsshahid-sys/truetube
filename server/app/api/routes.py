@@ -6,6 +6,7 @@ from typing import AsyncGenerator
 import yt_dlp.version
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import FileResponse, StreamingResponse
+from starlette.background import BackgroundTask
 
 from app.config import settings
 from app.core.security import (
@@ -22,7 +23,7 @@ from app.models.schemas import (
     MediaInfoResponse,
 )
 from app.services.download_pipeline import download_pipeline
-from app.services.job_manager import job_manager
+from app.services.job_manager import job_manager, safe_rmtree
 from app.services.ytdlp_service import (
     InvalidMediaUrlError,
     MediaNetworkError,
@@ -292,8 +293,11 @@ def download_completed_file(job_id: str):
     }
     media_type = mime_types.get(ext, "application/octet-stream")
 
+    cleanup_task = BackgroundTask(safe_rmtree, job.temp_dir) if job.temp_dir else None
+
     return FileResponse(
         path=str(job.file_path),
         media_type=media_type,
         filename=safe_name,
+        background=cleanup_task,
     )

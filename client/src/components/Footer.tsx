@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap } from 'lucide-react';
+import { Zap, Sparkles, MessageCircle, MapPin, Heart } from 'lucide-react';
 
 export const Footer: React.FC = () => {
   return (
@@ -17,38 +17,78 @@ export const Footer: React.FC = () => {
               </span>
             </div>
             <span className="hidden sm:inline text-slate-600">•</span>
-            <span className="text-xs text-slate-400">Download the web. Your way.</span>
+            <span className="text-xs text-slate-400">
+              Download the web. Your way.
+            </span>
+          </div>
+
+          {/* TrueLife Academy Team Badge & WhatsApp */}
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <a
+              href="https://web.facebook.com/TrueLifeAcademyOfficial/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 text-xs font-semibold text-indigo-300 hover:text-white hover:bg-indigo-600/20 transition-all shadow-sm shadow-indigo-500/10"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Made by</span>
+              <span className="text-white font-bold underline decoration-indigo-400 underline-offset-2">
+                TrueLife Academy Team
+              </span>
+            </a>
+
+            <a
+              href="https://wa.me/923331200038?text=Hi%20TrueLife%20Academy%2C%20I%20have%20an%20inquiry%20regarding%20courses."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 text-xs font-semibold text-emerald-300 hover:text-white hover:bg-emerald-600/20 transition-all shadow-sm shadow-emerald-500/10"
+            >
+              <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+              <span>WhatsApp: 03331200038</span>
+            </a>
           </div>
 
           {/* Links */}
           <div className="flex items-center flex-wrap justify-center gap-5 text-xs text-slate-400">
             <a href="#about" className="hover:text-white transition-colors">
-              About
+              About Academy
             </a>
-            <a href="#privacy" className="hover:text-white transition-colors">
-              Privacy
-            </a>
-            <a href="#terms" className="hover:text-white transition-colors">
-              Terms
+            <a href="#features" className="hover:text-white transition-colors">
+              Features
             </a>
             <a href="#faq" className="hover:text-white transition-colors">
               FAQ
             </a>
-            <a href="#contact" className="hover:text-white transition-colors">
-              Contact
+            <a
+              href="https://web.facebook.com/TrueLifeAcademyOfficial/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-white transition-colors"
+            >
+              Facebook
             </a>
           </div>
+        </div>
 
-          {/* Powered by yt-dlp badge */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs font-mono text-slate-400">
-            <span>Powered by</span>
-            <span className="font-semibold text-indigo-400">yt-dlp</span>
+        {/* Academy Mission & Location Banner */}
+        <div className="py-6 border-b border-[#1E293B]/60 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-slate-400 text-center md:text-left">
+          <div className="space-y-1">
+            <p className="font-semibold text-slate-200">
+              TrueLife Academy — Practical AI Training for Real Income
+            </p>
+            <p className="text-slate-400 text-[11px]">
+              Prompt Engineering • AI Web Design • AI Graphic Design • AI Content Creation • "آج سیکھیں، کل کمائیں"
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 text-slate-400 text-xs">
+            <MapPin className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Ahmadpur Sial, Pakistan</span>
           </div>
         </div>
 
         {/* Legal Disclaimer & Copyright */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500 text-center sm:text-left">
-          <p>© {new Date().getFullYear()} TrueTube. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} TrueTube. All rights reserved. Made with <Heart className="w-3 h-3 inline text-red-500 fill-red-500" /> by TrueLife Academy.</p>
           <p className="max-w-md">
             Please respect creator copyright. TrueTube is intended for personal media backups and legally authorized downloads.
           </p>

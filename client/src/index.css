@@ -34,21 +34,63 @@ body {
   overflow-x: hidden;
 }
 
-/* Custom subtle glow gradients */
+/* Custom 3D & glow gradients */
 .bg-hero-glow {
-  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.22), transparent 70%);
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(99, 102, 241, 0.25), transparent 70%);
 }
 
 .bg-purple-radial {
-  background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.12), transparent 60%);
+  background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.16), transparent 60%);
 }
 
 .glow-border {
-  box-shadow: 0 0 15px rgba(99, 102, 241, 0.25);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.35);
+}
+
+.glow-border-emerald {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.35);
 }
 
 .glow-text {
-  text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);
+  text-shadow: 0 0 20px rgba(139, 92, 246, 0.6);
+}
+
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+/* 3D Floating animation */
+@keyframes float3d {
+  0%, 100% {
+    transform: translateY(0px) rotateX(0deg) rotateY(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotateX(3deg) rotateY(-3deg);
+  }
+}
+
+.animate-float-3d {
+  animation: float3d 6s ease-in-out infinite;
+}
+
+/* 3D Slow Orb Pulse */
+@keyframes pulseOrb {
+  0%, 100% {
+    transform: scale(1) translateZ(0);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.12) translateZ(20px);
+    opacity: 0.85;
+  }
+}
+
+.animate-pulse-orb {
+  animation: pulseOrb 8s ease-in-out infinite;
 }
 
 /* Custom scrollbar */

@@ -57,10 +57,7 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
   };
 
   const formatList: { id: FormatContainer; name: string; desc: string; badge?: string }[] = [
-    { id: 'mp4', name: 'MP4', desc: 'H.264 - Widely supported', badge: 'Recommended' },
-    { id: 'webm', name: 'WebM', desc: 'VP9 - Great quality' },
-    { id: 'mkv', name: 'MKV', desc: 'H.264/HEVC - Flexible' },
-    { id: 'avi', name: 'AVI', desc: 'H.264 - Legacy' },
+    { id: 'mp4', name: 'MP4', desc: 'Universal Video (H.264/AAC) - Highest Compatibility', badge: 'Standard' },
   ];
 
   const audioFormats = [

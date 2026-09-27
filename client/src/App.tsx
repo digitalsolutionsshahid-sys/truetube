@@ -13,6 +13,8 @@ import type { ErrorType } from './components/ErrorCards';
 import { FeatureSections } from './components/FeatureSections';
 import { Footer } from './components/Footer';
 import { ToastContainer } from './components/Toast';
+import { ThreeDScene } from './components/ThreeDScene';
+import { AboutAcademy } from './components/AboutAcademy';
 import type { ToastMessage } from './components/Toast';
 import type {
   MediaMetadata,
@@ -34,7 +36,7 @@ const STORAGE_KEY = 'truetube_recent_downloads_v1';
 
 export const App: React.FC = () => {
   // Navigation & Flow State
-  const [url, setUrl] = useState<string>('https://www.youtube.com/watch?v=aqz-KE-bpKQ');
+  const [url, setUrl] = useState<string>('');
   const [appState, setAppState] = useState<
     | 'IDLE'
     | 'ANALYZING'
@@ -223,6 +225,20 @@ export const App: React.FC = () => {
           }));
         },
         (finalProgress) => {
+          const fileDownloadUrl = getDownloadFileUrl(jobId);
+
+          // Automatically trigger download directly into Chrome to save server memory/storage
+          try {
+            const a = document.createElement('a');
+            a.href = fileDownloadUrl;
+            a.download = finalProgress.filename || `${media.title.replace(/[\s/]/g, '_')}.${options.format}`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+          } catch (e) {
+            console.warn('Auto-download trigger notice:', e);
+          }
+
           // Add to recent downloads
           const newItem: RecentDownloadItem = {
             id: `rec_${Date.now()}`,
@@ -233,7 +249,7 @@ export const App: React.FC = () => {
             file_size: finalProgress.file_size_str || 'Downloaded',
             timestamp: 'Just now',
             status: 'Completed',
-            file_url: getDownloadFileUrl(jobId),
+            file_url: fileDownloadUrl,
           };
 
           setRecentDownloads((prev) => [newItem, ...prev.slice(0, 19)]);
@@ -244,7 +260,7 @@ export const App: React.FC = () => {
             progress_percent: 100,
           }));
           setAppState('COMPLETED');
-          addToast('success', 'Download Complete!', 'Your media file has been processed.');
+          addToast('success', 'Download Complete!', 'Saved directly to your browser.');
         },
         (errorMsg) => {
           setErrorType('DOWNLOAD_FAILED');
@@ -292,16 +308,30 @@ export const App: React.FC = () => {
   };
 
   const handleDownloadAnother = () => {
+    setUrl('');
     setAppState('IDLE');
   };
 
   const handleResetToHome = () => {
+    setUrl('');
     setAppState('IDLE');
   };
 
   const scrollToSection = (sectionId: string) => {
     if (sectionId === 'home') {
+      setUrl('');
+      setAppState('IDLE');
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (appState !== 'IDLE') {
+      setAppState('IDLE');
+      setTimeout(() => {
+        const elem = document.getElementById(sectionId);
+        if (elem) {
+          elem.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
       return;
     }
     const elem = document.getElementById(sectionId);
@@ -319,11 +349,14 @@ export const App: React.FC = () => {
       <main className="flex-1 py-4 sm:py-8 space-y-12">
         {appState === 'IDLE' && (
           <>
-            <HeroInput
-              url={url}
-              onChangeUrl={setUrl}
-              onAnalyze={handleAnalyze}
-            />
+            <div className="relative">
+              <ThreeDScene />
+              <HeroInput
+                url={url}
+                onChangeUrl={setUrl}
+                onAnalyze={handleAnalyze}
+              />
+            </div>
             <RecentDownloads
               items={recentDownloads}
               onClearHistory={() => {
@@ -333,6 +366,7 @@ export const App: React.FC = () => {
               onRedownload={handleRedownloadItem}
               onViewAll={() => setAppState('RECENT_DOWNLOADS')}
             />
+            <AboutAcademy />
             <FeatureSections onScrollToTop={() => scrollToSection('home')} />
           </>
         )}

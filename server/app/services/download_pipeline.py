@@ -157,8 +157,8 @@ class DownloadPipeline:
                 "preferredquality": "320" if req.quality_preference == "best" else "192",
             })
         else:
-            # Video mode
-            target_container = req.container if req.container in ("mp4", "mkv", "webm", "avi") else "mp4"
+            # Video mode: Strictly allow MP4 container as requested
+            target_container = "mp4"
             ydl_opts["merge_output_format"] = target_container
 
             audio_spec = f"{clean_audio_id}/bestaudio/best" if clean_audio_id else "bestaudio/best"

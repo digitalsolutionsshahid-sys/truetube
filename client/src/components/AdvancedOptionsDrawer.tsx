@@ -239,9 +239,7 @@ export const AdvancedOptionsDrawer: React.FC<AdvancedOptionsDrawerProps> = ({
                 }
                 className="w-full bg-[#131B2E] border border-[#1E293B] rounded-xl px-3.5 py-2.5 text-sm text-slate-200 uppercase focus:outline-none focus:border-indigo-500 font-mono"
               >
-                <option value="mp4">MP4</option>
-                <option value="mkv">MKV</option>
-                <option value="webm">WEBM</option>
+                <option value="mp4">MP4 (Universal Standard)</option>
               </select>
             </div>
           </div>

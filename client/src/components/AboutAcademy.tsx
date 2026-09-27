@@ -81,11 +81,11 @@ export const AboutAcademy: React.FC = () => {
           <span>About TrueLife Academy</span>
         </div>
 
-        {/* Urdu Positioning Headline */}
+        {/* Positioning Headline */}
         <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">
-          Beginner سے Professional تک{' '}
+          From Beginner to Professional{' '}
           <span className="bg-gradient-to-r from-indigo-400 via-violet-400 to-purple-400 bg-clip-text text-transparent">
-            مکمل Practical Training
+            Complete Practical Training
           </span>
         </h2>
 

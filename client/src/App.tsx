@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { RouterProvider, useRouter } from './router/RouterContext';
+import { RouterProvider } from './router/RouterContext';
+import { useRouter } from './router/useRouter';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
 import { ToastContainer } from './components/Toast';
@@ -59,3 +60,5 @@ export const App: React.FC = () => {
     </RouterProvider>
   );
 };
+
+export default App;

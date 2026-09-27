@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { HelpCircle, ChevronDown, MessageCircle, Sparkles, ExternalLink } from 'lucide-react';
-import { useRouter } from '../router/RouterContext';
+import { HelpCircle, ChevronDown, MessageCircle, ExternalLink } from 'lucide-react';
 
 export const FaqPage: React.FC = () => {
-  const { navigateTo } = useRouter();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
 
   const toggleFaq = (index: number) => {

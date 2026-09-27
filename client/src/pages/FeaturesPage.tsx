@@ -12,7 +12,7 @@ import {
   Cpu,
   ArrowRight,
 } from 'lucide-react';
-import { useRouter } from '../router/RouterContext';
+import { useRouter } from '../router/useRouter';
 
 export const FeaturesPage: React.FC = () => {
   const { navigateTo } = useRouter();

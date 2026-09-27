@@ -1,15 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { AppRoute, pathToRoute, routeToPath } from './routes';
-
-interface RouterContextType {
-  route: AppRoute;
-  navigateTo: (targetRoute: AppRoute) => void;
-}
-
-const RouterContext = createContext<RouterContextType>({
-  route: 'home',
-  navigateTo: () => {},
-});
+import React, { useState, useEffect, useCallback } from 'react';
+import { pathToRoute, routeToPath } from './routes';
+import type { AppRoute } from './routes';
+import { RouterContext } from './context';
 
 export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [route, setRoute] = useState<AppRoute>(() => {
@@ -46,8 +38,4 @@ export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       {children}
     </RouterContext.Provider>
   );
-};
-
-export const useRouter = (): RouterContextType => {
-  return useContext(RouterContext);
 };

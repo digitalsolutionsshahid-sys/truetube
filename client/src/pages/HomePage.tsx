@@ -385,11 +385,10 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
           <ErrorCard
             type={errorType}
             message={errorMessage}
-            onTryAgain={() => {
+            onAction={() => {
               setAppState('IDLE');
               handleAnalyze();
             }}
-            onChangeUrl={() => setAppState('IDLE')}
           />
         </div>
       )}

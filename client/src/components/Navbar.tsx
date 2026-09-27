@@ -1,7 +1,7 @@
 import React from 'react';
 import { Zap, Sparkles, MessageCircle } from 'lucide-react';
-import { useRouter } from '../router/RouterContext';
-import { AppRoute } from '../router/routes';
+import { useRouter } from '../router/useRouter';
+import type { AppRoute } from '../router/routes';
 
 export const Navbar: React.FC = () => {
   const { route, navigateTo } = useRouter();

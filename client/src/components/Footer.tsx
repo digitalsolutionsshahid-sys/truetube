@@ -1,6 +1,6 @@
 import React from 'react';
 import { Zap, Sparkles, MessageCircle, MapPin, Heart } from 'lucide-react';
-import { useRouter } from '../router/RouterContext';
+import { useRouter } from '../router/useRouter';
 
 export const Footer: React.FC = () => {
   const { navigateTo } = useRouter();

@@ -325,6 +325,14 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
           <span className="text-xs text-slate-500">Subtitles, metadata, custom naming</span>
         </div>
 
+        {/* Active Direct Download Loading Banner */}
+        {isDownloading && (
+          <div className="flex items-center justify-center gap-2.5 p-3.5 rounded-xl bg-indigo-950/50 border border-indigo-500/30 text-indigo-300 text-xs sm:text-sm animate-pulse mb-4">
+            <Loader2 className="w-4 h-4 animate-spin text-indigo-400 flex-shrink-0" />
+            <span>Connecting to media stream... Your Chrome download will start in a moment.</span>
+          </div>
+        )}
+
         {/* Action Bar (Download CTA, Copy Link, More) */}
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <button

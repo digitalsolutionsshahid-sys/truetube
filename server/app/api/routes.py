@@ -5,7 +5,7 @@ import threading
 from typing import AsyncGenerator
 import yt_dlp.version
 from fastapi import APIRouter, HTTPException, status
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from starlette.background import BackgroundTask
 
 from app.config import settings
@@ -312,20 +312,35 @@ def direct_stream_download(
     subtitles: str | None = None,
     embed_metadata: bool = True,
     embed_thumbnail: bool = False,
+    token: str | None = None,
 ):
     """
     Direct external download endpoint for Chrome.
     Validates media URL, executes download/merge, and delivers file directly to Chrome
-    with immediate server storage cleanup.
+    with immediate server storage cleanup and optional token cookie for client download detection.
     """
     try:
         clean_url = validate_and_sanitize_url(url)
     except SSRFBlockedError as e:
+        if token:
+            resp = JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={"error": str(e), "code": "UNSUPPORTED_SOURCE"},
+            )
+            resp.set_cookie(key=f"truetube_err_{token}", value="1", max_age=60, path="/")
+            return resp
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail={"error": str(e), "code": "UNSUPPORTED_SOURCE"},
         )
     except SecurityValidationError as e:
+        if token:
+            resp = JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"error": str(e), "code": "INVALID_URL"},
+            )
+            resp.set_cookie(key=f"truetube_err_{token}", value="1", max_age=60, path="/")
+            return resp
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail={"error": str(e), "code": "INVALID_URL"},
@@ -342,37 +357,64 @@ def direct_stream_download(
         embed_thumbnail=embed_thumbnail,
     )
 
-    job = job_manager.create_job(req)
-    download_pipeline._run_job(job)
+    try:
+        job = job_manager.create_job(req)
+        download_pipeline._run_job(job)
 
-    if job.status != "COMPLETED" or not job.file_path or not job.file_path.exists():
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "error": job.error or "Media download processing failed.",
-                "code": job.error_code or "DOWNLOAD_FAILED",
-            },
+        if job.status != "COMPLETED" or not job.file_path or not job.file_path.exists():
+            err_detail = job.error or "Media download processing failed."
+            if token:
+                resp = JSONResponse(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    content={"error": err_detail, "code": job.error_code or "DOWNLOAD_FAILED"},
+                )
+                resp.set_cookie(key=f"truetube_err_{token}", value="1", max_age=60, path="/")
+                return resp
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail={
+                    "error": err_detail,
+                    "code": job.error_code or "DOWNLOAD_FAILED",
+                },
+            )
+
+        safe_name = sanitize_filename(job.filename or job.file_path.name)
+        ext = job.file_path.suffix.lower()
+        mime_types = {
+            ".mp4": "video/mp4",
+            ".webm": "video/webm",
+            ".mkv": "video/x-matroska",
+            ".avi": "video/x-msvideo",
+            ".mp3": "audio/mpeg",
+            ".m4a": "audio/mp4",
+            ".wav": "audio/wav",
+            ".opus": "audio/opus",
+        }
+        media_type = mime_types.get(ext, "application/octet-stream")
+        cleanup_task = BackgroundTask(safe_rmtree, job.temp_dir) if job.temp_dir else None
+
+        response = FileResponse(
+            path=str(job.file_path),
+            media_type=media_type,
+            filename=safe_name,
+            background=cleanup_task,
         )
+        if token:
+            response.set_cookie(
+                key=f"truetube_dl_{token}",
+                value="1",
+                max_age=60,
+                path="/",
+            )
+        return response
 
-    safe_name = sanitize_filename(job.filename or job.file_path.name)
-    ext = job.file_path.suffix.lower()
-    mime_types = {
-        ".mp4": "video/mp4",
-        ".webm": "video/webm",
-        ".mkv": "video/x-matroska",
-        ".avi": "video/x-msvideo",
-        ".mp3": "audio/mpeg",
-        ".m4a": "audio/mp4",
-        ".wav": "audio/wav",
-        ".opus": "audio/opus",
-    }
-    media_type = mime_types.get(ext, "application/octet-stream")
-    cleanup_task = BackgroundTask(safe_rmtree, job.temp_dir) if job.temp_dir else None
-
-    return FileResponse(
-        path=str(job.file_path),
-        media_type=media_type,
-        filename=safe_name,
-        background=cleanup_task,
-    )
+    except Exception as e:
+        if token:
+            resp = JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"error": str(e), "code": "DOWNLOAD_FAILED"},
+            )
+            resp.set_cookie(key=f"truetube_err_{token}", value="1", max_age=60, path="/")
+            return resp
+        raise
 

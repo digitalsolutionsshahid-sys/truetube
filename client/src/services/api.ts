@@ -114,6 +114,7 @@ export function getDirectDownloadUrl(options: {
   subtitles?: string;
   embed_metadata?: boolean;
   embed_thumbnail?: boolean;
+  token?: string;
 }): string {
   const params = new URLSearchParams();
   params.set('url', options.url);
@@ -124,6 +125,7 @@ export function getDirectDownloadUrl(options: {
   if (options.subtitles) params.set('subtitles', options.subtitles);
   if (options.embed_metadata !== undefined) params.set('embed_metadata', String(options.embed_metadata));
   if (options.embed_thumbnail !== undefined) params.set('embed_thumbnail', String(options.embed_thumbnail));
+  if (options.token) params.set('token', options.token);
   return `${API_BASE}/download/direct?${params.toString()}`;
 }
 

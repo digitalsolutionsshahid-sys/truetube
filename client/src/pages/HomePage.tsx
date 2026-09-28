@@ -4,7 +4,6 @@ import { AnalyzingState } from '../components/AnalyzingState';
 import { MediaPreview } from '../components/MediaPreview';
 import { FormatSelector } from '../components/FormatSelector';
 import { AdvancedOptionsDrawer } from '../components/AdvancedOptionsDrawer';
-import { DownloadPreparingModal } from '../components/DownloadPreparingModal';
 import { RecentDownloads } from '../components/RecentDownloads';
 import { ErrorCard } from '../components/ErrorCards';
 import type { ErrorType } from '../components/ErrorCards';
@@ -14,15 +13,11 @@ import type {
   AdvancedOptionsConfig,
   RecentDownloadItem,
   FormatContainer,
-  DownloadProgress,
 } from '../types/media';
 import { MOCK_MEDIA_METADATA, MOCK_RECENT_DOWNLOADS } from '../mockData';
 import {
   analyzeMedia,
-  createDownloadJob,
-  cancelDownloadJob,
-  getDownloadFileUrl,
-  subscribeJobProgress,
+  getDirectDownloadUrl,
 } from '../services/api';
 
 const STORAGE_KEY = 'truetube_recent_downloads_v1';
@@ -44,23 +39,8 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
 
   // Media State
   const [media, setMedia] = useState<MediaMetadata>(MOCK_MEDIA_METADATA);
-
-  // Download Preparation & Modal State
-  const [isPreparingModalOpen, setIsPreparingModalOpen] = useState(false);
-  const [activeJobId, setActiveJobId] = useState<string>('');
-  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress>({
-    status: 'DOWNLOADING',
-    progress_percent: 5,
-    speed_str: 'Accelerating...',
-    eta_str: '--:--',
-    downloaded_bytes: 0,
-    total_bytes: 0,
-    current_stage: 'Connecting to media source...',
-    filename: 'video.mp4',
-    file_size_str: '',
-  });
-
-  const sseUnsubscribeRef = useRef<(() => void) | null>(null);
+  const [isDownloadingInChrome, setIsDownloadingInChrome] = useState(false);
+  const downloadTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Advanced Options State
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
@@ -116,11 +96,11 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
     }
   }, [recentDownloads]);
 
-  // Clean up any active SSE on unmount
+  // Clean up any active poll interval on unmount
   useEffect(() => {
     return () => {
-      if (sseUnsubscribeRef.current) {
-        sseUnsubscribeRef.current();
+      if (downloadTimerRef.current) {
+        clearInterval(downloadTimerRef.current);
       }
     };
   }, []);
@@ -153,32 +133,19 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
     }
   };
 
-  const handleStartDownload = async (options: {
+  const handleStartDownload = (options: {
     format: FormatContainer;
     qualityId: string;
     audioStreamId: string;
     audioOnly: boolean;
   }) => {
-    setIsPreparingModalOpen(true);
-    setDownloadProgress({
-      status: 'DOWNLOADING',
-      progress_percent: 5,
-      speed_str: 'Accelerating...',
-      eta_str: '--:--',
-      downloaded_bytes: 0,
-      total_bytes: 0,
-      current_stage: 'Connecting to media stream...',
-      filename: `${media.title.replace(/[\s/]/g, '_')}.${options.audioOnly ? options.format : 'mp4'}`,
-      file_size_str: 'Calculating...',
-    });
+    // Unique token to detect when Chrome receives the download stream from server
+    const token = 'dl_' + Date.now();
+    setIsDownloadingInChrome(true);
+    addToast('info', 'Connecting to media stream...', 'Chrome download will start in a moment.');
 
     try {
-      if (sseUnsubscribeRef.current) {
-        sseUnsubscribeRef.current();
-      }
-
-      // 1. Submit download job to high-speed backend
-      const jobResp = await createDownloadJob({
+      const directDownloadUrl = getDirectDownloadUrl({
         url: media.url,
         format_id: options.qualityId,
         container: options.audioOnly ? options.format : 'mp4',
@@ -187,34 +154,42 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
         subtitles: advancedConfig.subtitles_enabled ? advancedConfig.subtitle_lang : undefined,
         embed_metadata: advancedConfig.embed_metadata,
         embed_thumbnail: advancedConfig.embed_thumbnail,
+        token: token,
       });
 
-      const jobId = jobResp.job_id || (jobResp as any).id;
-      setActiveJobId(jobId);
+      if (downloadTimerRef.current) {
+        clearInterval(downloadTimerRef.current);
+      }
 
-      // 2. Subscribe to real-time high-speed progress updates
-      const unsubscribe = subscribeJobProgress(
-        jobId,
-        (progress) => {
-          setDownloadProgress((prev) => ({
-            ...prev,
-            ...progress,
-            progress_percent: progress.progress_percent ?? prev.progress_percent,
-          }));
-        },
-        (finalProgress) => {
-          // Automatic native Chrome download trigger
-          const fileDownloadUrl = getDownloadFileUrl(jobId);
-          try {
-            const a = document.createElement('a');
-            a.href = fileDownloadUrl;
-            a.download = finalProgress.filename || `${media.title.replace(/[\s/]/g, '_')}.mp4`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-          } catch (e) {
-            console.warn('Auto-download trigger notice:', e);
+      // Invisible iframe initiates external Chrome download directly without navigating away
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.src = directDownloadUrl;
+      document.body.appendChild(iframe);
+
+      const startTime = Date.now();
+
+      // Poll document.cookie to detect exactly when Chrome starts downloading
+      downloadTimerRef.current = setInterval(() => {
+        const cookies = document.cookie || '';
+        const successCookie = `truetube_dl_${token}=1`;
+        const errorCookie = `truetube_err_${token}=1`;
+
+        if (cookies.includes(successCookie)) {
+          if (downloadTimerRef.current) {
+            clearInterval(downloadTimerRef.current);
+            downloadTimerRef.current = null;
           }
+          // Clean up cookie and iframe
+          document.cookie = `truetube_dl_${token}=; path=/; max-age=0`;
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          }, 3000);
+
+          setIsDownloadingInChrome(false);
+          addToast('success', 'Download Started in Chrome!', 'Check your browser downloads tray.');
 
           // Add to recent downloads history
           const newItem: RecentDownloadItem = {
@@ -223,51 +198,41 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
             thumbnail: media.thumbnail,
             format: (options.audioOnly ? options.format : 'mp4').toUpperCase(),
             quality: options.audioOnly ? 'Audio' : options.qualityId.toUpperCase(),
-            file_size: finalProgress.file_size_str || 'Fast Download',
+            file_size: 'Chrome Download',
             timestamp: 'Just now',
             status: 'Completed',
-            file_url: fileDownloadUrl,
+            file_url: directDownloadUrl,
           };
-
           setRecentDownloads((prev) => [newItem, ...prev.slice(0, 19)]);
-          setDownloadProgress((prev) => ({
-            ...prev,
-            ...finalProgress,
-            status: 'COMPLETED',
-            progress_percent: 100,
-          }));
-
-          addToast('success', 'Download Started in Chrome!', 'Check your browser downloads tray.');
-
-          // Smoothly close modal after user sees the completed checkmark
-          setTimeout(() => {
-            setIsPreparingModalOpen(false);
-          }, 1800);
-        },
-        (errorMsg) => {
-          setIsPreparingModalOpen(false);
-          addToast('error', 'Download Failed', errorMsg || 'Stream preparation failed.');
+        } else if (cookies.includes(errorCookie)) {
+          if (downloadTimerRef.current) {
+            clearInterval(downloadTimerRef.current);
+            downloadTimerRef.current = null;
+          }
+          document.cookie = `truetube_err_${token}=; path=/; max-age=0`;
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+          setIsDownloadingInChrome(false);
+          addToast('error', 'Download Failed', 'Could not complete stream download.');
+        } else if (Date.now() - startTime > 120000) {
+          // Timeout fallback
+          if (downloadTimerRef.current) {
+            clearInterval(downloadTimerRef.current);
+            downloadTimerRef.current = null;
+          }
+          if (document.body.contains(iframe)) {
+            document.body.removeChild(iframe);
+          }
+          setIsDownloadingInChrome(false);
         }
-      );
+      }, 300);
 
-      sseUnsubscribeRef.current = unsubscribe;
     } catch (err: any) {
-      console.warn('Job submission error:', err);
-      setIsPreparingModalOpen(false);
+      console.warn('Direct download initiation error:', err);
+      setIsDownloadingInChrome(false);
       addToast('error', 'Download Failed', err.message || 'Could not start Chrome download.');
     }
-  };
-
-  const handleCancelPreparation = async () => {
-    if (activeJobId) {
-      await cancelDownloadJob(activeJobId);
-      addToast('info', 'Download cancelled', 'Cleaned up temporary stream files.');
-    }
-    if (sseUnsubscribeRef.current) {
-      sseUnsubscribeRef.current();
-      sseUnsubscribeRef.current = null;
-    }
-    setIsPreparingModalOpen(false);
   };
 
   return (
@@ -318,7 +283,7 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
           <FormatSelector
             key={media.url}
             media={media}
-            isDownloading={isPreparingModalOpen}
+            isDownloading={isDownloadingInChrome}
             onStartDownload={handleStartDownload}
             onOpenAdvancedOptions={() => setIsAdvancedOpen(true)}
           />
@@ -365,14 +330,6 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
           />
         </div>
       )}
-
-      {/* Real-time High Speed Preparing Modal */}
-      <DownloadPreparingModal
-        isOpen={isPreparingModalOpen}
-        media={media}
-        progress={downloadProgress}
-        onCancel={handleCancelPreparation}
-      />
 
       {/* Advanced Options Modal */}
       <AdvancedOptionsDrawer

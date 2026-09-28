@@ -359,8 +359,8 @@ def direct_stream_download(
         "--no-warnings",
         "-q",
         "-o", "-",
-        "--concurrent-fragment-downloads", "8",
-        "--buffersize", "1048576",
+        "--concurrent-fragments", "8",
+        "--buffer-size", "1048576",
         "--http-chunk-size", "10485760",
     ]
 
@@ -377,18 +377,15 @@ def direct_stream_download(
             cmd += ["-f", "bestaudio/best"]
         media_type = f"audio/{target_codec}" if target_codec != "mp3" else "audio/mpeg"
     else:
-        cmd += ["--merge-output-format", "mp4", "--format-sort", "res,ext:mp4:m4a"]
         audio_spec = f"{audio_stream_id.replace('audio_', '').strip()}/bestaudio/best" if audio_stream_id else "bestaudio/best"
         fmt = (format_id or "").strip()
-        if fmt in ("best", "best_4k", "4k") or not fmt:
+        if not fmt or fmt in ("best", "best_4k", "4k"):
             cmd += ["-f", f"bestvideo+{audio_spec}/best"]
         elif fmt.endswith("p") and fmt[:-1].isdigit():
             h = fmt[:-1]
             cmd += ["-f", f"bestvideo[height<={h}]+{audio_spec}/best[height<={h}]/bestvideo+{audio_spec}/best"]
-        elif fmt.isdigit():
-            cmd += ["-f", f"bestvideo[height<={fmt}]+{audio_spec}/best[height<={fmt}]/bestvideo+{audio_spec}/best"]
         else:
-            cmd += ["-f", f"{fmt}+{audio_spec}/{fmt}+bestaudio/best"]
+            cmd += ["-f", f"{fmt}+{audio_spec}/{fmt}+bestaudio/{fmt}/best"]
         media_type = "video/mp4"
 
     cmd.append(clean_url)
@@ -397,7 +394,7 @@ def direct_stream_download(
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
             bufsize=1048576,
         )
         try:

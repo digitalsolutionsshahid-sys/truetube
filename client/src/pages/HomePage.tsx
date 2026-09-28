@@ -162,11 +162,18 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
         clearInterval(downloadTimerRef.current);
       }
 
-      // Invisible iframe initiates external Chrome download directly without navigating away
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.src = directDownloadUrl;
-      document.body.appendChild(iframe);
+      // Trigger external browser download in Chrome
+      const link = document.createElement('a');
+      link.href = directDownloadUrl;
+      link.setAttribute('download', '');
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => {
+        if (document.body.contains(link)) {
+          document.body.removeChild(link);
+        }
+      }, 500);
 
       const startTime = Date.now();
 
@@ -181,14 +188,7 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
             clearInterval(downloadTimerRef.current);
             downloadTimerRef.current = null;
           }
-          // Clean up cookie and iframe
           document.cookie = `truetube_dl_${token}=; path=/; max-age=0`;
-          setTimeout(() => {
-            if (document.body.contains(iframe)) {
-              document.body.removeChild(iframe);
-            }
-          }, 3000);
-
           setIsDownloadingInChrome(false);
           addToast('success', 'Download Started in Chrome!', 'Check your browser downloads tray.');
 
@@ -211,9 +211,6 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
             downloadTimerRef.current = null;
           }
           document.cookie = `truetube_err_${token}=; path=/; max-age=0`;
-          if (document.body.contains(iframe)) {
-            document.body.removeChild(iframe);
-          }
           setIsDownloadingInChrome(false);
           addToast('error', 'Download Failed', 'Could not complete stream download.');
         } else if (Date.now() - startTime > 120000) {
@@ -221,9 +218,6 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
           if (downloadTimerRef.current) {
             clearInterval(downloadTimerRef.current);
             downloadTimerRef.current = null;
-          }
-          if (document.body.contains(iframe)) {
-            document.body.removeChild(iframe);
           }
           setIsDownloadingInChrome(false);
         }

@@ -256,9 +256,11 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                     >
                       <div>
                         <span className="font-bold text-xs sm:text-sm text-white block">
-                          {a.format} {a.is_default && '(default)'}
+                          {a.label || a.format} {a.is_default && '(Default)'}
                         </span>
-                        <span className="text-[11px] text-slate-400 font-mono">{a.bitrate}</span>
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          {a.format} • {a.bitrate}
+                        </span>
                       </div>
                       <div
                         className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${

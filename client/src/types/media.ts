@@ -20,6 +20,8 @@ export interface AudioStreamOption {
   format: string;
   bitrate: string; // e.g. "128 kbps", "320 kbps"
   is_default?: boolean;
+  language?: string;
+  label?: string;
 }
 
 export interface MediaMetadata {

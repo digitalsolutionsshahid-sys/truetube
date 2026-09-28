@@ -237,14 +237,49 @@ class YtDlpService:
                 # Audio-only stream
                 available_audio_containers.add(ext.upper())
                 abr = int(fmt.get("abr") or fmt.get("tbr") or 128)
+                lang = (fmt.get("language") or "").strip().lower()
+                format_note = (fmt.get("format_note") or "").strip()
+                format_note_lower = format_note.lower()
+
+                # Detect if this track is original / default audio
+                is_original = (
+                    "original" in format_note_lower
+                    or "default" in format_note_lower
+                    or (fmt.get("language_preference") is not None and fmt.get("language_preference") >= 0)
+                )
+
+                # Friendly language name
+                if "hindi" in format_note_lower or lang.startswith("hi"):
+                    lang_name = "Hindi"
+                elif "english" in format_note_lower or lang.startswith("en"):
+                    lang_name = "English"
+                elif "urdu" in format_note_lower or lang.startswith("ur"):
+                    lang_name = "Urdu"
+                elif "punjabi" in format_note_lower or lang.startswith("pa"):
+                    lang_name = "Punjabi"
+                elif "spanish" in format_note_lower or lang.startswith("es"):
+                    lang_name = "Spanish"
+                elif "french" in format_note_lower or lang.startswith("fr"):
+                    lang_name = "French"
+                elif "arabic" in format_note_lower or lang.startswith("ar"):
+                    lang_name = "Arabic"
+                elif lang:
+                    lang_name = lang.upper()
+                else:
+                    lang_name = ""
+
+                track_label = f"{lang_name} ({'Original' if is_original else 'Dubbed'})" if lang_name else ("Original" if is_original else "")
+
                 audio_streams.append(
                     AudioStreamItem(
                         id=f"audio_{fmt_id}",
                         format_id=fmt_id,
                         format="AAC" if "mp4a" in acodec or "aac" in acodec else "Opus" if "opus" in acodec else ext.upper(),
                         bitrate=f"{abr} kbps",
-                        is_default=False,
+                        is_default=is_original,
                         filesize=filesize,
+                        language=lang_name or lang or None,
+                        label=track_label or None,
                     )
                 )
 
@@ -280,14 +315,28 @@ class YtDlpService:
             rec_candidate.is_recommended = True
             best_video_size = rec_candidate.filesize or sorted_formats[0].filesize
 
-        # Normalize and deduplicate audio streams
+        # Normalize and prioritize audio streams (prefer Original / Default language first, then highest bitrate)
         if audio_streams:
-            deduped_audio: dict[str, AudioStreamItem] = {}
-            for a in sorted(audio_streams, key=lambda x: int(x.bitrate.split()[0]) if x.bitrate.split()[0].isdigit() else 0, reverse=True):
-                if a.format not in deduped_audio:
-                    deduped_audio[a.format] = a
+            def audio_sort_key(item: AudioStreamItem):
+                is_orig = 1 if (item.is_default or (item.label and "original" in item.label.lower())) else 0
+                try:
+                    bitrate_val = int(item.bitrate.split()[0])
+                except (ValueError, IndexError):
+                    bitrate_val = 0
+                return (is_orig, bitrate_val)
+
+            sorted_audio = sorted(audio_streams, key=audio_sort_key, reverse=True)
+
+            # Deduplicate by (language, format) so each language gets its highest-quality audio option
+            deduped_audio: dict[tuple, AudioStreamItem] = {}
+            for a in sorted_audio:
+                key = (a.language or "default", a.format)
+                if key not in deduped_audio:
+                    deduped_audio[key] = a
             audio_streams = list(deduped_audio.values())
-            audio_streams[0].is_default = True
+            # Ensure the top original track is marked default and others false
+            for idx, a in enumerate(audio_streams):
+                a.is_default = (idx == 0)
         else:
             audio_streams = [
                 AudioStreamItem(id="audio_default", format_id="bestaudio", format="AAC", bitrate="128 kbps", is_default=True),

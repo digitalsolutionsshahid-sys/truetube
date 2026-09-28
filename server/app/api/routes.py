@@ -372,12 +372,17 @@ def direct_stream_download(
         cmd += ["-x", "--audio-format", target_codec]
         if audio_stream_id:
             clean_audio_id = audio_stream_id.replace("audio_", "").strip()
-            cmd += ["-f", f"{clean_audio_id}/bestaudio/best"]
+            cmd += ["-f", f"{clean_audio_id}/bestaudio[format_note*=original]/bestaudio/best"]
         else:
-            cmd += ["-f", "bestaudio/best"]
+            cmd += ["-f", "bestaudio[format_note*=original]/bestaudio[language_preference>=0]/bestaudio/best"]
         media_type = f"audio/{target_codec}" if target_codec != "mp3" else "audio/mpeg"
     else:
-        audio_spec = f"{audio_stream_id.replace('audio_', '').strip()}/bestaudio/best" if audio_stream_id else "bestaudio/best"
+        if audio_stream_id:
+            clean_audio_id = audio_stream_id.replace("audio_", "").strip()
+            audio_spec = f"{clean_audio_id}/bestaudio[format_note*=original]/bestaudio/best"
+        else:
+            audio_spec = "bestaudio[format_note*=original]/bestaudio[language_preference>=0]/bestaudio/best"
+
         fmt = (format_id or "").strip()
         if not fmt or fmt in ("best", "best_4k", "4k"):
             cmd += ["-f", f"bestvideo+{audio_spec}/best"]

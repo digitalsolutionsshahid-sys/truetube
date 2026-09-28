@@ -26,6 +26,8 @@ class AudioStreamItem(BaseModel):
     bitrate: str
     is_default: bool = False
     filesize: Optional[int] = None
+    language: Optional[str] = None
+    label: Optional[str] = None
 
 class MediaInfoResponse(BaseModel):
     url: str

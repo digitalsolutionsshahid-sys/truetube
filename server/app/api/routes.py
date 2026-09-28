@@ -385,12 +385,12 @@ def direct_stream_download(
 
         fmt = (format_id or "").strip()
         if not fmt or fmt in ("best", "best_4k", "4k"):
-            cmd += ["-f", f"bestvideo+{audio_spec}/best"]
+            cmd += ["-f", f"bestvideo[protocol!*=m3u8]+{audio_spec}/bestvideo+{audio_spec}/best"]
         elif fmt.endswith("p") and fmt[:-1].isdigit():
             h = fmt[:-1]
-            cmd += ["-f", f"bestvideo[height<={h}]+{audio_spec}/best[height<={h}]/bestvideo+{audio_spec}/best"]
+            cmd += ["-f", f"bestvideo[height<={h}][protocol!*=m3u8]+{audio_spec}/bestvideo[height<={h}]+{audio_spec}/best[height<={h}]/best"]
         else:
-            cmd += ["-f", f"{fmt}+{audio_spec}/{fmt}+bestaudio/{fmt}/best"]
+            cmd += ["-f", f"{fmt}+{audio_spec}/{fmt}+bestaudio/{fmt}/bestvideo[protocol!*=m3u8]+{audio_spec}/best"]
         media_type = "video/mp4"
 
     cmd.append(clean_url)

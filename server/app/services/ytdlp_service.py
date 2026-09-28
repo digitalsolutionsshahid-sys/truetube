@@ -150,6 +150,7 @@ class YtDlpService:
             for f in raw_formats if f.get("vcodec") == "none" and f.get("acodec") != "none"
         )
         video_formats_map: dict[int, FormatItem] = {}
+        video_tier_scores: dict[int, int] = {}
         available_video_containers: set[str] = set()
         available_audio_containers: set[str] = set()
         audio_streams: list[AudioStreamItem] = []
@@ -210,17 +211,23 @@ class YtDlpService:
                     res_str = f"{width}x{height}" if width and height else f"{closest_tier}p"
                     approx_str = f"~{format_bytes(filesize)}" if filesize else f"~{closest_tier * 2} MB"
 
-                    # If tier already present, prefer mp4 or higher bitrate/filesize
-                    existing = video_formats_map.get(closest_tier)
-                    should_replace = False
-                    if not existing:
-                        should_replace = True
-                    elif ext == "mp4" and existing.container != "mp4":
-                        should_replace = True
-                    elif filesize and existing.filesize and filesize > existing.filesize:
-                        should_replace = True
+                    proto = (fmt.get("protocol") or "").lower()
+                    is_m3u8 = "m3u8" in proto
+                    is_mp4 = ext in ("mp4", "m4v")
+                    is_h264 = "avc" in vcodec.lower() or "h264" in vcodec.lower()
+                    fs = filesize or 0
 
-                    if should_replace:
+                    # Prioritize non-m3u8 HTTPS streams over HLS, prefer MP4 and H.264
+                    new_score = (
+                        (0 if is_m3u8 else 1_000_000_000)
+                        + (100_000_000 if is_mp4 else 0)
+                        + (10_000_000 if is_h264 else 0)
+                        + min(fs // 1024, 9_999_999)
+                    )
+
+                    existing_score = video_tier_scores.get(closest_tier, -1)
+                    if new_score > existing_score:
+                        video_tier_scores[closest_tier] = new_score
                         video_formats_map[closest_tier] = FormatItem(
                             id=f"{closest_tier}p",
                             format_id=fmt_id,
@@ -229,7 +236,7 @@ class YtDlpService:
                             height=closest_tier,
                             fps=fps,
                             container="mp4" if ext in ("mp4", "m4v") else ext,
-                            codec="H.264" if ("avc" in vcodec.lower() or "h264" in vcodec.lower()) else vcodec[:10],
+                            codec="H.264" if is_h264 else vcodec[:10],
                             approx_size_str=approx_str,
                             has_video=True,
                             has_audio=has_audio,

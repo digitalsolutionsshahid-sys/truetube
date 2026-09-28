@@ -350,7 +350,7 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
             {isDownloading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin text-white" />
-                <span>Starting Chrome Download...</span>
+                <span>Connecting to media stream...</span>
               </>
             ) : (
               <>

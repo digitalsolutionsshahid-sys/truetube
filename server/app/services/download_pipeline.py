@@ -180,19 +180,19 @@ class DownloadPipeline:
             res = (req.resolution or "").lower().replace("p", "").strip()
 
             if fmt in ("best", "best_4k", "4k") or (not fmt and not res):
-                ydl_opts["format"] = f"bestvideo+{audio_spec}/best"
+                ydl_opts["format"] = f"bestvideo[protocol!*=m3u8]+{audio_spec}/bestvideo+{audio_spec}/best"
             elif fmt.endswith("p") and fmt[:-1].isdigit():
                 h = int(fmt[:-1])
-                ydl_opts["format"] = f"bestvideo[height<={h}]+{audio_spec}/best[height<={h}]/bestvideo+bestaudio/best"
+                ydl_opts["format"] = f"bestvideo[height<={h}][protocol!*=m3u8]+{audio_spec}/best[height<={h}]/bestvideo+bestaudio/best"
             elif res.isdigit():
                 h = int(res)
-                ydl_opts["format"] = f"bestvideo[height<={h}]+{audio_spec}/best[height<={h}]/bestvideo+bestaudio/best"
+                ydl_opts["format"] = f"bestvideo[height<={h}][protocol!*=m3u8]+{audio_spec}/best[height<={h}]/bestvideo+bestaudio/best"
             elif "+" in fmt:
                 ydl_opts["format"] = fmt
             elif fmt:
-                ydl_opts["format"] = f"{fmt}+{audio_spec}/{fmt}+bestaudio/best"
+                ydl_opts["format"] = f"{fmt}+{audio_spec}/{fmt}+bestaudio/{fmt}/bestvideo[protocol!*=m3u8]+{audio_spec}/best"
             else:
-                ydl_opts["format"] = f"bestvideo+{audio_spec}/best"
+                ydl_opts["format"] = f"bestvideo[protocol!*=m3u8]+{audio_spec}/bestvideo+{audio_spec}/best"
 
         # Embed metadata if requested
         if req.embed_metadata:

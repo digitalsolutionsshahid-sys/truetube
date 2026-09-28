@@ -142,7 +142,7 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
     // Unique token to detect when Chrome receives the download stream from server
     const token = 'dl_' + Date.now();
     setIsDownloadingInChrome(true);
-    addToast('info', 'Connecting to media stream...', 'Chrome download will start in a moment.');
+    addToast('info', 'Connecting to media stream...', 'Your Chrome download will start in a moment.');
 
     try {
       const directDownloadUrl = getDirectDownloadUrl({

@@ -142,6 +142,7 @@ def test_live_download_pipeline_e2e():
 
     finally:
         server.should_exit = True
+        server_thread.join(timeout=3.0)
 
 if __name__ == "__main__":
     test_live_download_pipeline_e2e()

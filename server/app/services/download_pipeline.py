@@ -26,6 +26,11 @@ class DownloadPipeline:
 
     def submit_job(self, job: Job):
         """Submit job to the thread pool for asynchronous execution."""
+        if getattr(self.executor, "_shutdown", False):
+            self.executor = ThreadPoolExecutor(
+                max_workers=settings.MAX_CONCURRENT_JOBS,
+                thread_name_prefix="TrueTubeWorker",
+            )
         self.executor.submit(self._run_job, job)
 
     def _run_job(self, job: Job):

@@ -147,6 +147,7 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
     try {
       const directDownloadUrl = getDirectDownloadUrl({
         url: media.url,
+        title: media.title,
         format_id: options.qualityId,
         container: options.audioOnly ? options.format : 'mp4',
         audio_stream_id: options.audioStreamId,

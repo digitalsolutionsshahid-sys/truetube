@@ -234,3 +234,4 @@ def test_audit_live_pipeline_e2e_full_lifecycle():
 
     finally:
         server.should_exit = True
+        server_thread.join(timeout=3.0)

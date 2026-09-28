@@ -1,6 +1,8 @@
 import asyncio
 import json
 import shutil
+import subprocess
+import sys
 import threading
 from typing import AsyncGenerator
 import yt_dlp.version
@@ -305,6 +307,7 @@ def download_completed_file(job_id: str):
 @router.get("/download/direct")
 def direct_stream_download(
     url: str,
+    title: str | None = None,
     format_id: str = "best",
     container: str = "mp4",
     audio_stream_id: str | None = None,
@@ -315,9 +318,8 @@ def direct_stream_download(
     token: str | None = None,
 ):
     """
-    Direct external download endpoint for Chrome.
-    Validates media URL, executes download/merge, and delivers file directly to Chrome
-    with immediate server storage cleanup and optional token cookie for client download detection.
+    On-the-fly direct streaming endpoint for Chrome.
+    Pipes video/audio chunks directly to the browser with ZERO server disk storage.
     """
     try:
         clean_url = validate_and_sanitize_url(url)
@@ -346,75 +348,80 @@ def direct_stream_download(
             detail={"error": str(e), "code": "INVALID_URL"},
         )
 
-    req = DownloadJobRequest(
-        url=clean_url,
-        format_id=format_id,
-        container="mp4" if not audio_only else container,
-        audio_stream_id=audio_stream_id,
-        audio_only=audio_only,
-        subtitles=subtitles,
-        embed_metadata=embed_metadata,
-        embed_thumbnail=embed_thumbnail,
-    )
+    base_name = title or "download"
+    clean_base_name = sanitize_filename(base_name)
+    target_ext = container if audio_only else "mp4"
+    safe_filename = f"{clean_base_name}.{target_ext}"
 
-    try:
-        job = job_manager.create_job(req)
-        download_pipeline._run_job(job)
+    # Build on-the-fly streaming command (piped directly to stdout, zero disk storage)
+    cmd = [
+        sys.executable, "-m", "yt_dlp",
+        "--no-warnings",
+        "-q",
+        "-o", "-",
+        "--concurrent-fragment-downloads", "8",
+        "--buffersize", "1048576",
+        "--http-chunk-size", "10485760",
+    ]
 
-        if job.status != "COMPLETED" or not job.file_path or not job.file_path.exists():
-            err_detail = job.error or "Media download processing failed."
-            if token:
-                resp = JSONResponse(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    content={"error": err_detail, "code": job.error_code or "DOWNLOAD_FAILED"},
-                )
-                resp.set_cookie(key=f"truetube_err_{token}", value="1", max_age=60, path="/")
-                return resp
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail={
-                    "error": err_detail,
-                    "code": job.error_code or "DOWNLOAD_FAILED",
-                },
-            )
+    if settings.FFMPEG_PATH:
+        cmd += ["--ffmpeg-location", settings.FFMPEG_PATH]
 
-        safe_name = sanitize_filename(job.filename or job.file_path.name)
-        ext = job.file_path.suffix.lower()
-        mime_types = {
-            ".mp4": "video/mp4",
-            ".webm": "video/webm",
-            ".mkv": "video/x-matroska",
-            ".avi": "video/x-msvideo",
-            ".mp3": "audio/mpeg",
-            ".m4a": "audio/mp4",
-            ".wav": "audio/wav",
-            ".opus": "audio/opus",
-        }
-        media_type = mime_types.get(ext, "application/octet-stream")
-        cleanup_task = BackgroundTask(safe_rmtree, job.temp_dir) if job.temp_dir else None
+    if audio_only:
+        target_codec = container if container in ("mp3", "m4a", "wav", "opus") else "mp3"
+        cmd += ["-x", "--audio-format", target_codec]
+        if audio_stream_id:
+            clean_audio_id = audio_stream_id.replace("audio_", "").strip()
+            cmd += ["-f", f"{clean_audio_id}/bestaudio/best"]
+        else:
+            cmd += ["-f", "bestaudio/best"]
+        media_type = f"audio/{target_codec}" if target_codec != "mp3" else "audio/mpeg"
+    else:
+        cmd += ["--merge-output-format", "mp4", "--format-sort", "res,ext:mp4:m4a"]
+        audio_spec = f"{audio_stream_id.replace('audio_', '').strip()}/bestaudio/best" if audio_stream_id else "bestaudio/best"
+        fmt = (format_id or "").strip()
+        if fmt in ("best", "best_4k", "4k") or not fmt:
+            cmd += ["-f", f"bestvideo+{audio_spec}/best"]
+        elif fmt.endswith("p") and fmt[:-1].isdigit():
+            h = fmt[:-1]
+            cmd += ["-f", f"bestvideo[height<={h}]+{audio_spec}/best[height<={h}]/bestvideo+{audio_spec}/best"]
+        elif fmt.isdigit():
+            cmd += ["-f", f"bestvideo[height<={fmt}]+{audio_spec}/best[height<={fmt}]/bestvideo+{audio_spec}/best"]
+        else:
+            cmd += ["-f", f"{fmt}+{audio_spec}/{fmt}+bestaudio/best"]
+        media_type = "video/mp4"
 
-        response = FileResponse(
-            path=str(job.file_path),
-            media_type=media_type,
-            filename=safe_name,
-            background=cleanup_task,
+    cmd.append(clean_url)
+
+    def iter_stream():
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=1048576,
         )
-        if token:
-            response.set_cookie(
-                key=f"truetube_dl_{token}",
-                value="1",
-                max_age=60,
-                path="/",
-            )
-        return response
+        try:
+            while True:
+                chunk = proc.stdout.read(65536)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            try:
+                proc.kill()
+                proc.wait()
+            except Exception:
+                pass
 
-    except Exception as e:
-        if token:
-            resp = JSONResponse(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                content={"error": str(e), "code": "DOWNLOAD_FAILED"},
-            )
-            resp.set_cookie(key=f"truetube_err_{token}", value="1", max_age=60, path="/")
-            return resp
-        raise
+    headers = {
+        "Content-Disposition": f'attachment; filename="{safe_filename}"',
+    }
+    if token:
+        headers["Set-Cookie"] = f"truetube_dl_{token}=1; Path=/; Max-Age=60"
+
+    return StreamingResponse(
+        iter_stream(),
+        media_type=media_type,
+        headers=headers,
+    )
 

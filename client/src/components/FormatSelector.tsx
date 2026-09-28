@@ -256,7 +256,7 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                     >
                       <div>
                         <span className="font-bold text-xs sm:text-sm text-white block">
-                          {a.label || a.format} {a.is_default && '(Default)'}
+                          Original Audio {a.is_default && '(Default)'}
                         </span>
                         <span className="text-[11px] text-slate-400 font-mono">
                           {a.format} • {a.bitrate}

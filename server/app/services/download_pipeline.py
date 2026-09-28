@@ -171,7 +171,11 @@ class DownloadPipeline:
             target_container = "mp4"
             ydl_opts["merge_output_format"] = target_container
 
-            audio_spec = f"{clean_audio_id}/bestaudio/best" if clean_audio_id else "bestaudio/best"
+            audio_spec = (
+                f"{clean_audio_id}/bestaudio[format_note*=original]/bestaudio[format_note!*=dubbed]/bestaudio"
+                if clean_audio_id
+                else "bestaudio[format_note*=original]/bestaudio[language_preference>=0]/bestaudio[format_note!*=dubbed]/bestaudio"
+            )
             fmt = (req.format_id or "").strip()
             res = (req.resolution or "").lower().replace("p", "").strip()
 

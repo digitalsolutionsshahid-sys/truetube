@@ -145,6 +145,10 @@ class YtDlpService:
 
         # Process formats
         raw_formats = info.get("formats") or []
+        has_original_tag = any(
+            "original" in (f.get("format_note") or "").lower()
+            for f in raw_formats if f.get("vcodec") == "none" and f.get("acodec") != "none"
+        )
         video_formats_map: dict[int, FormatItem] = {}
         available_video_containers: set[str] = set()
         available_audio_containers: set[str] = set()
@@ -234,52 +238,33 @@ class YtDlpService:
                         )
 
             elif has_audio and not has_video:
-                # Audio-only stream
-                available_audio_containers.add(ext.upper())
-                abr = int(fmt.get("abr") or fmt.get("tbr") or 128)
-                lang = (fmt.get("language") or "").strip().lower()
                 format_note = (fmt.get("format_note") or "").strip()
                 format_note_lower = format_note.lower()
 
-                # Detect if this track is original / default audio
-                is_original = (
-                    "original" in format_note_lower
-                    or "default" in format_note_lower
-                    or (fmt.get("language_preference") is not None and fmt.get("language_preference") >= 0)
-                )
+                # Strictly EXCLUDE any dubbed or auto-dubbed track
+                if "dubbed" in format_note_lower or "dub" in format_note_lower:
+                    continue
 
-                # Friendly language name
-                if "hindi" in format_note_lower or lang.startswith("hi"):
-                    lang_name = "Hindi"
-                elif "english" in format_note_lower or lang.startswith("en"):
-                    lang_name = "English"
-                elif "urdu" in format_note_lower or lang.startswith("ur"):
-                    lang_name = "Urdu"
-                elif "punjabi" in format_note_lower or lang.startswith("pa"):
-                    lang_name = "Punjabi"
-                elif "spanish" in format_note_lower or lang.startswith("es"):
-                    lang_name = "Spanish"
-                elif "french" in format_note_lower or lang.startswith("fr"):
-                    lang_name = "French"
-                elif "arabic" in format_note_lower or lang.startswith("ar"):
-                    lang_name = "Arabic"
-                elif lang:
-                    lang_name = lang.upper()
-                else:
-                    lang_name = ""
+                # If the video has tracks explicitly marked as 'original', discard non-original tracks
+                if has_original_tag and ("original" not in format_note_lower and "default" not in format_note_lower and (fmt.get("language_preference") or 0) < 0):
+                    continue
 
-                track_label = f"{lang_name} ({'Original' if is_original else 'Dubbed'})" if lang_name else ("Original" if is_original else "")
+                available_audio_containers.add(ext.upper())
+                abr = int(fmt.get("abr") or fmt.get("tbr") or 128)
+                lang = (fmt.get("language") or "").strip().lower()
+
+                codec_name = "AAC" if "mp4a" in acodec or "aac" in acodec else "Opus" if "opus" in acodec else ext.upper()
 
                 audio_streams.append(
                     AudioStreamItem(
                         id=f"audio_{fmt_id}",
                         format_id=fmt_id,
-                        format="AAC" if "mp4a" in acodec or "aac" in acodec else "Opus" if "opus" in acodec else ext.upper(),
+                        format=codec_name,
                         bitrate=f"{abr} kbps",
-                        is_default=is_original,
+                        is_default=True,
                         filesize=filesize,
-                        language=lang_name or lang or None,
-                        label=track_label or None,
+                        language=lang or None,
+                        label="Original Audio",
                     )
                 )
 
@@ -315,33 +300,19 @@ class YtDlpService:
             rec_candidate.is_recommended = True
             best_video_size = rec_candidate.filesize or sorted_formats[0].filesize
 
-        # Normalize and prioritize audio streams (prefer Original / Default language first, then highest bitrate)
+        # Normalize and deduplicate audio streams (strictly original audio only, highest bitrate per codec)
         if audio_streams:
-            def audio_sort_key(item: AudioStreamItem):
-                is_orig = 1 if (item.is_default or (item.label and "original" in item.label.lower())) else 0
-                try:
-                    bitrate_val = int(item.bitrate.split()[0])
-                except (ValueError, IndexError):
-                    bitrate_val = 0
-                return (is_orig, bitrate_val)
-
-            sorted_audio = sorted(audio_streams, key=audio_sort_key, reverse=True)
-
-            # Deduplicate by (language, format) so each language gets its highest-quality audio option
-            deduped_audio: dict[tuple, AudioStreamItem] = {}
-            for a in sorted_audio:
-                key = (a.language or "default", a.format)
-                if key not in deduped_audio:
-                    deduped_audio[key] = a
+            deduped_audio: dict[str, AudioStreamItem] = {}
+            for a in sorted(audio_streams, key=lambda x: int(x.bitrate.split()[0]) if x.bitrate.split()[0].isdigit() else 0, reverse=True):
+                if a.format not in deduped_audio:
+                    deduped_audio[a.format] = a
             audio_streams = list(deduped_audio.values())
-            # Ensure the top original track is marked default and others false
             for idx, a in enumerate(audio_streams):
                 a.is_default = (idx == 0)
         else:
             audio_streams = [
-                AudioStreamItem(id="audio_default", format_id="bestaudio", format="AAC", bitrate="128 kbps", is_default=True),
-                AudioStreamItem(id="audio_opus", format_id="bestaudio", format="Opus", bitrate="160 kbps"),
-                AudioStreamItem(id="audio_mp3", format_id="bestaudio", format="MP3", bitrate="320 kbps"),
+                AudioStreamItem(id="audio_default", format_id="bestaudio", format="AAC", bitrate="128 kbps", is_default=True, label="Original Audio"),
+                AudioStreamItem(id="audio_opus", format_id="bestaudio", format="Opus", bitrate="160 kbps", label="Original Audio"),
             ]
 
         # Process subtitles

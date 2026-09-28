@@ -372,16 +372,16 @@ def direct_stream_download(
         cmd += ["-x", "--audio-format", target_codec]
         if audio_stream_id:
             clean_audio_id = audio_stream_id.replace("audio_", "").strip()
-            cmd += ["-f", f"{clean_audio_id}/bestaudio[format_note*=original]/bestaudio/best"]
+            cmd += ["-f", f"{clean_audio_id}/bestaudio[format_note*=original]/bestaudio[format_note!*=dubbed]/bestaudio"]
         else:
-            cmd += ["-f", "bestaudio[format_note*=original]/bestaudio[language_preference>=0]/bestaudio/best"]
+            cmd += ["-f", "bestaudio[format_note*=original]/bestaudio[language_preference>=0]/bestaudio[format_note!*=dubbed]/bestaudio"]
         media_type = f"audio/{target_codec}" if target_codec != "mp3" else "audio/mpeg"
     else:
         if audio_stream_id:
             clean_audio_id = audio_stream_id.replace("audio_", "").strip()
-            audio_spec = f"{clean_audio_id}/bestaudio[format_note*=original]/bestaudio/best"
+            audio_spec = f"{clean_audio_id}/bestaudio[format_note*=original]/bestaudio[format_note!*=dubbed]/bestaudio"
         else:
-            audio_spec = "bestaudio[format_note*=original]/bestaudio[language_preference>=0]/bestaudio/best"
+            audio_spec = "bestaudio[format_note*=original]/bestaudio[language_preference>=0]/bestaudio[format_note!*=dubbed]/bestaudio"
 
         fmt = (format_id or "").strip()
         if not fmt or fmt in ("best", "best_4k", "4k"):

@@ -26,3 +26,6 @@ storage/temp/
 .DS_Store
 Thumbs.db
 *.zip
+scratch*
+watch_*.py
+trigger_*.py

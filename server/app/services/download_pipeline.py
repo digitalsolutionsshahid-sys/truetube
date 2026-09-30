@@ -151,6 +151,16 @@ class DownloadPipeline:
         if settings.FFMPEG_PATH:
             ydl_opts["ffmpeg_location"] = settings.FFMPEG_PATH
 
+        ydl_opts["extractor_args"] = {
+            "youtube": {
+                "player_client": ["android", "ios", "web"],
+                "player_skip": ["configs"],
+            }
+        }
+        cookie_file = settings.get_cookie_file()
+        if cookie_file:
+            ydl_opts["cookiefile"] = cookie_file
+
         postprocessors = []
 
         # Audio stream ID sanitized

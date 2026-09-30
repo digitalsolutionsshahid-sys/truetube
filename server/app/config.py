@@ -37,4 +37,22 @@ class Settings(BaseModel):
         if o.strip()
     ]
 
+    # YouTube Anti-Bot & Cookies
+    YOUTUBE_COOKIES_PATH: str = os.getenv("YOUTUBE_COOKIES_PATH", "")
+    YOUTUBE_COOKIES: str = os.getenv("YOUTUBE_COOKIES", "")
+
+    def get_cookie_file(self) -> str | None:
+        """Returns the path to a valid cookies file, or writes raw YOUTUBE_COOKIES content to disk."""
+        if self.YOUTUBE_COOKIES_PATH and os.path.isfile(self.YOUTUBE_COOKIES_PATH):
+            return self.YOUTUBE_COOKIES_PATH
+        if self.YOUTUBE_COOKIES:
+            target = self.STORAGE_PATH / "youtube_cookies.txt"
+            try:
+                if not target.exists() or target.read_text(encoding="utf-8") != self.YOUTUBE_COOKIES:
+                    target.write_text(self.YOUTUBE_COOKIES, encoding="utf-8")
+                return str(target)
+            except Exception:
+                pass
+        return None
+
 settings = Settings()

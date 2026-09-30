@@ -362,7 +362,12 @@ def direct_stream_download(
         "--concurrent-fragments", "8",
         "--buffer-size", "1048576",
         "--http-chunk-size", "10485760",
+        "--extractor-args", "youtube:player_client=android,ios,web;player_skip=configs",
     ]
+
+    cookie_file = settings.get_cookie_file()
+    if cookie_file:
+        cmd += ["--cookies", cookie_file]
 
     if settings.FFMPEG_PATH:
         cmd += ["--ffmpeg-location", settings.FFMPEG_PATH]

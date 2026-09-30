@@ -1,10 +1,11 @@
 FROM python:3.11-slim
 
-# Install system dependencies & FFmpeg
+# Install system dependencies, FFmpeg, and Node.js for YouTube JS player challenges
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     ca-certificates \
     curl \
+    nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

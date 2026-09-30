@@ -85,10 +85,19 @@ class YtDlpService:
             "skip_download": True,
             "socket_timeout": 15,
             "noprogress": True,
+            "extractor_args": {
+                "youtube": {
+                    "player_client": ["android", "ios", "web"],
+                    "player_skip": ["configs"],
+                }
+            },
         }
         ffmpeg_bin = self.ffmpeg_path or settings.FFMPEG_PATH or shutil.which("ffmpeg")
         if ffmpeg_bin:
             opts["ffmpeg_location"] = ffmpeg_bin
+        cookie_file = settings.get_cookie_file()
+        if cookie_file:
+            opts["cookiefile"] = cookie_file
         return opts
 
     def extract_info(self, url: str, timeout: int = 30) -> MediaInfoResponse:

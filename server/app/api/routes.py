@@ -387,9 +387,9 @@ def direct_stream_download(
         cmd += ["-x", "--audio-format", target_codec]
         if audio_stream_id:
             clean_audio_id = audio_stream_id.replace("audio_", "").strip()
-            cmd += ["-f", f"{clean_audio_id}/bestaudio[format_note*=original]/bestaudio[format_note!*=dubbed]/bestaudio/best"]
+            cmd += ["-f", f"{clean_audio_id}/bestaudio[ext={target_codec}]/bestaudio[acodec={target_codec}]/bestaudio/best"]
         else:
-            cmd += ["-f", "bestaudio[format_note*=original]/bestaudio[language_preference>=0]/bestaudio[format_note!*=dubbed]/bestaudio/best"]
+            cmd += ["-f", f"bestaudio[ext={target_codec}]/bestaudio[acodec={target_codec}]/bestaudio[format_note*=original]/bestaudio/best"]
         media_type = f"audio/{target_codec}" if target_codec != "mp3" else "audio/mpeg"
     else:
         if audio_stream_id:

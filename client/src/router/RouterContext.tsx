@@ -10,9 +10,25 @@ export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
     return 'home';
   });
+  const [homeKey, setHomeKey] = useState(0);
+
+  const resetHome = useCallback(() => {
+    setRoute('home');
+    setHomeKey((k) => k + 1);
+    if (typeof window !== 'undefined') {
+      const path = routeToPath('home');
+      if (window.location.pathname !== path) {
+        window.history.pushState({ route: 'home' }, '', path);
+      }
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, []);
 
   const navigateTo = useCallback((targetRoute: AppRoute) => {
     setRoute(targetRoute);
+    if (targetRoute === 'home') {
+      setHomeKey((k) => k + 1);
+    }
     if (typeof window !== 'undefined') {
       const path = routeToPath(targetRoute);
       if (window.location.pathname !== path) {
@@ -26,6 +42,9 @@ export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const handlePopState = () => {
       const newRoute = pathToRoute(window.location.pathname);
       setRoute(newRoute);
+      if (newRoute === 'home') {
+        setHomeKey((k) => k + 1);
+      }
       window.scrollTo({ top: 0, behavior: 'instant' });
     };
 
@@ -34,7 +53,7 @@ export const RouterProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   return (
-    <RouterContext.Provider value={{ route, navigateTo }}>
+    <RouterContext.Provider value={{ route, navigateTo, homeKey, resetHome }}>
       {children}
     </RouterContext.Provider>
   );

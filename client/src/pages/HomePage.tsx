@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { HeroInput } from '../components/HeroInput';
-import type { FormatPreset, QualityPreset } from '../components/HeroInput';
 import { AnalyzingState } from '../components/AnalyzingState';
 import { MediaPreview } from '../components/MediaPreview';
 import { FormatSelector } from '../components/FormatSelector';
@@ -54,10 +53,6 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
     | 'RECENT_DOWNLOADS'
     | 'ERROR'
   >('IDLE');
-
-  // Format and Quality Preference Presets (configured on first load)
-  const [formatPreset, setFormatPreset] = useState<FormatPreset>('mp4');
-  const [qualityPreset, setQualityPreset] = useState<QualityPreset>('best');
 
   // Media State
   const [media, setMedia] = useState<MediaMetadata>(MOCK_MEDIA_METADATA);
@@ -318,7 +313,7 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
     },
     {
       q: 'Can I extract high-quality audio only?',
-      a: 'Yes! Select the Audio (MP3) format option above or switch to the Audio tab on the format selector to download pristine audio up to 320kbps.',
+      a: 'Yes! Switch to the Audio tab on the format selector to download pristine audio up to 320kbps MP3 or lossless M4A.',
     },
   ];
 
@@ -334,10 +329,6 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
               onChangeUrl={setUrl}
               onAnalyze={handleAnalyze}
               isAnalyzing={false}
-              selectedFormat={formatPreset}
-              onSelectFormat={setFormatPreset}
-              selectedQuality={qualityPreset}
-              onSelectQuality={setQualityPreset}
             />
           </div>
 
@@ -529,8 +520,6 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
           <FormatSelector
             key={media.url}
             media={media}
-            initialTab={formatPreset === 'mp3' ? 'audio' : 'video'}
-            initialQualityPreset={qualityPreset}
             isDownloading={isDownloadingInChrome}
             onStartDownload={handleStartDownload}
             onOpenAdvancedOptions={() => setIsAdvancedOpen(true)}

@@ -4,15 +4,8 @@ import {
   ArrowRight,
   Clipboard,
   X,
-  Video,
-  Music,
-  ShieldCheck,
   Loader2,
-  Check,
 } from 'lucide-react';
-
-export type FormatPreset = 'mp4' | 'mp3';
-export type QualityPreset = 'best' | '1080p' | '720p' | 'audio_320';
 
 interface HeroInputProps {
   url: string;
@@ -20,10 +13,6 @@ interface HeroInputProps {
   onAnalyze: () => void;
   disabled?: boolean;
   isAnalyzing?: boolean;
-  selectedFormat?: FormatPreset;
-  onSelectFormat?: (format: FormatPreset) => void;
-  selectedQuality?: QualityPreset;
-  onSelectQuality?: (quality: QualityPreset) => void;
 }
 
 export const HeroInput: React.FC<HeroInputProps> = ({
@@ -32,10 +21,6 @@ export const HeroInput: React.FC<HeroInputProps> = ({
   onAnalyze,
   disabled = false,
   isAnalyzing = false,
-  selectedFormat = 'mp4',
-  onSelectFormat,
-  selectedQuality = 'best',
-  onSelectQuality,
 }) => {
   const [isFocused, setIsFocused] = useState(false);
 
@@ -112,19 +97,19 @@ export const HeroInput: React.FC<HeroInputProps> = ({
               <button
                 type="button"
                 onClick={() => onChangeUrl('')}
-                className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-colors flex-shrink-0"
+                className="p-1.5 rounded-lg text-slate-500 hover:text-white hover:bg-slate-800 transition-colors flex-shrink-0 cursor-pointer"
                 aria-label="Clear input"
               >
                 <X className="w-4 h-4" />
               </button>
             )}
 
-            {/* In-field Paste Action (ONLY ONE paste button on the card) */}
+            {/* In-field Paste Action */}
             {!url && !isAnalyzing && (
               <button
                 type="button"
                 onClick={handlePaste}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-indigo-300 hover:bg-slate-800/80 transition-colors flex-shrink-0"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-indigo-300 hover:bg-slate-800/80 transition-colors flex-shrink-0 cursor-pointer"
                 title="Paste from clipboard"
               >
                 <Clipboard className="w-3.5 h-3.5 text-indigo-400" />
@@ -138,7 +123,7 @@ export const HeroInput: React.FC<HeroInputProps> = ({
               onClick={onAnalyze}
               disabled={!url.trim() || disabled || isAnalyzing}
               aria-label="Get download options"
-              className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium text-xs sm:text-sm transition-all duration-200 shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 active:scale-95 flex-shrink-0"
+              className="flex items-center justify-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-medium text-xs sm:text-sm transition-all duration-200 shadow-lg shadow-indigo-600/30 hover:shadow-indigo-600/50 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:shadow-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-400 active:scale-95 flex-shrink-0 cursor-pointer"
             >
               {isAnalyzing ? (
                 <>
@@ -155,105 +140,10 @@ export const HeroInput: React.FC<HeroInputProps> = ({
             </button>
           </div>
 
-          {/* Upfront Format & Quality Selectors (Visible on first load before URL entry) */}
-          <div className="mt-4 p-3 rounded-xl bg-[#0D111D]/90 border border-[#1E293B] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-            {/* Format Selector Pills */}
-            <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-start">
-              <span className="text-slate-400 font-medium text-[11px] uppercase tracking-wider mr-1">
-                Format:
-              </span>
-              <button
-                type="button"
-                onClick={() => onSelectFormat?.('mp4')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
-                  selectedFormat === 'mp4'
-                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 border border-indigo-500'
-                    : 'bg-slate-900/60 text-slate-400 hover:text-white border border-slate-800'
-                }`}
-              >
-                <Video className="w-3.5 h-3.5" />
-                <span>Video (MP4)</span>
-                {selectedFormat === 'mp4' && <Check className="w-3 h-3 text-indigo-200" />}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => onSelectFormat?.('mp3')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition-all ${
-                  selectedFormat === 'mp3'
-                    ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 border border-indigo-500'
-                    : 'bg-slate-900/60 text-slate-400 hover:text-white border border-slate-800'
-                }`}
-              >
-                <Music className="w-3.5 h-3.5" />
-                <span>Audio (MP3)</span>
-                {selectedFormat === 'mp3' && <Check className="w-3 h-3 text-indigo-200" />}
-              </button>
-            </div>
-
-            {/* Quality Preset Pills */}
-            <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-end overflow-x-auto pb-0.5">
-              <span className="text-slate-400 font-medium text-[11px] uppercase tracking-wider mr-1">
-                Quality:
-              </span>
-              {selectedFormat === 'mp4' ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => onSelectQuality?.('best')}
-                    className={`px-2.5 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
-                      selectedQuality === 'best'
-                        ? 'bg-indigo-600/30 text-indigo-200 border border-indigo-500/50'
-                        : 'bg-slate-900/60 text-slate-400 hover:text-white border border-slate-800'
-                    }`}
-                  >
-                    Best (Auto)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSelectQuality?.('1080p')}
-                    className={`px-2.5 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
-                      selectedQuality === '1080p'
-                        ? 'bg-indigo-600/30 text-indigo-200 border border-indigo-500/50'
-                        : 'bg-slate-900/60 text-slate-400 hover:text-white border border-slate-800'
-                    }`}
-                  >
-                    1080p
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSelectQuality?.('720p')}
-                    className={`px-2.5 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
-                      selectedQuality === '720p'
-                        ? 'bg-indigo-600/30 text-indigo-200 border border-indigo-500/50'
-                        : 'bg-slate-900/60 text-slate-400 hover:text-white border border-slate-800'
-                    }`}
-                  >
-                    720p
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => onSelectQuality?.('audio_320')}
-                    className={`px-2.5 py-1.5 rounded-lg font-medium transition-all whitespace-nowrap ${
-                      selectedQuality === 'audio_320'
-                        ? 'bg-indigo-600/30 text-indigo-200 border border-indigo-500/50'
-                        : 'bg-slate-900/60 text-slate-400 hover:text-white border border-slate-800'
-                    }`}
-                  >
-                    320 kbps (HQ)
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Privacy & Trust Microcopy */}
-          <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-slate-400">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-            <span>Links are processed securely in memory and never stored.</span>
+          <div className="mt-3 flex items-center justify-center gap-2 px-2 text-xs">
+            <span className="text-slate-500 text-center">
+              Supports YouTube, TikTok, Vimeo, Twitter, Instagram and 1000+ more sites.
+            </span>
           </div>
         </div>
       </div>

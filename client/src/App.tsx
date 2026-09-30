@@ -11,7 +11,7 @@ import { FaqPage } from './pages/FaqPage';
 import { AboutPage } from './pages/AboutPage';
 
 const AppContent: React.FC = () => {
-  const { route } = useRouter();
+  const { route, homeKey } = useRouter();
 
   // Toast Notification System
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
@@ -38,7 +38,7 @@ const AppContent: React.FC = () => {
 
       {/* Main Dynamic View Area */}
       <main className="flex-1 py-4 sm:py-8">
-        {route === 'home' && <HomePage addToast={addToast} />}
+        {route === 'home' && <HomePage key={homeKey} addToast={addToast} />}
         {route === 'features' && <FeaturesPage />}
         {route === 'faq' && <FaqPage />}
         {route === 'about' && <AboutPage />}

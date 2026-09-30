@@ -90,19 +90,15 @@ class YtDlpService:
             "socket_timeout": 20,
             "noprogress": True,
             "remote_components": ["ejs:github"],
-        }
-        if not cookie_file:
-            opts["extractor_args"] = {
+            "extractor_args": {
                 "youtube": {
-                    "player_client": ["visionos", "android", "ios", "mweb"],
+                    "player_client": ["android", "web"],
                 }
-            }
-        else:
+            },
+        }
+        if cookie_file:
             opts["cookiefile"] = cookie_file
 
-        node_bin = shutil.which("node") or shutil.which("nodejs")
-        if node_bin:
-            opts["js_runtimes"] = {"node": {}}
         ffmpeg_bin = self.ffmpeg_path or settings.FFMPEG_PATH or shutil.which("ffmpeg")
         if ffmpeg_bin:
             opts["ffmpeg_location"] = ffmpeg_bin
@@ -120,13 +116,12 @@ class YtDlpService:
                     return ydl.extract_info(url, download=False)
             except yt_dlp.utils.DownloadError as e:
                 err_lower = str(e).lower()
-                if "bot" in err_lower or "sign in" in err_lower or "confirm" in err_lower:
-                    logger.warning("YouTube bot challenge detected on %s, retrying with creator mobile clients...", url)
+                if "bot" in err_lower or "sign in" in err_lower or "confirm" in err_lower or "reload" in err_lower:
+                    logger.warning("YouTube challenge/reload detected on %s, retrying with android client...", url)
                     fallback_opts = dict(ydl_opts)
                     fallback_opts["extractor_args"] = {
                         "youtube": {
-                            "player_client": ["android_creator", "android", "ios"],
-                            "player_skip": ["webpage", "configs"],
+                            "player_client": ["android"],
                         }
                     }
                     with yt_dlp.YoutubeDL(fallback_opts) as fallback_ydl:

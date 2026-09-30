@@ -152,19 +152,14 @@ class DownloadPipeline:
             ydl_opts["ffmpeg_location"] = settings.FFMPEG_PATH
 
         ydl_opts["remote_components"] = ["ejs:github"]
-        cookie_file = settings.get_cookie_file()
-        if not cookie_file:
-            ydl_opts["extractor_args"] = {
-                "youtube": {
-                    "player_client": ["visionos", "android", "ios", "mweb"],
-                }
+        ydl_opts["extractor_args"] = {
+            "youtube": {
+                "player_client": ["android", "web"],
             }
-        else:
+        }
+        cookie_file = settings.get_cookie_file()
+        if cookie_file:
             ydl_opts["cookiefile"] = cookie_file
-
-        node_bin = shutil.which("node") or shutil.which("nodejs")
-        if node_bin:
-            ydl_opts["js_runtimes"] = {"node": {}}
 
         postprocessors = []
 

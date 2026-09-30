@@ -1,5 +1,6 @@
 import concurrent.futures
 import datetime
+import logging
 import math
 import shutil
 from typing import Any, Optional
@@ -10,6 +11,8 @@ import yt_dlp.version
 
 from app.config import settings
 from app.models.schemas import AudioStreamItem, FormatItem, MediaInfoResponse
+
+logger = logging.getLogger("truetube.ytdlp")
 
 class YtDlpExtractionError(Exception):
     """Base error for yt-dlp extraction issues."""
@@ -87,8 +90,8 @@ class YtDlpService:
             "noprogress": True,
             "extractor_args": {
                 "youtube": {
-                    "player_client": ["android", "ios", "web"],
-                    "player_skip": ["configs"],
+                    "player_client": ["ios", "android", "mweb"],
+                    "player_skip": ["webpage", "configs"],
                 }
             },
         }
@@ -113,11 +116,11 @@ class YtDlpService:
             except yt_dlp.utils.DownloadError as e:
                 err_lower = str(e).lower()
                 if "bot" in err_lower or "sign in" in err_lower or "confirm" in err_lower:
-                    logger.warning("YouTube bot challenge detected on %s, retrying with mobile clients...", url)
+                    logger.warning("YouTube bot challenge detected on %s, retrying with creator mobile clients...", url)
                     fallback_opts = dict(ydl_opts)
                     fallback_opts["extractor_args"] = {
                         "youtube": {
-                            "player_client": ["ios", "android"],
+                            "player_client": ["android_creator", "android", "ios"],
                             "player_skip": ["webpage", "configs"],
                         }
                     }

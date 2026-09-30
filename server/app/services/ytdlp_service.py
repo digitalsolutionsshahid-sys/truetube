@@ -90,11 +90,13 @@ class YtDlpService:
             "noprogress": True,
             "extractor_args": {
                 "youtube": {
-                    "player_client": ["ios", "android", "mweb"],
-                    "player_skip": ["webpage", "configs"],
+                    "player_client": ["visionos", "android", "ios", "mweb"],
                 }
             },
         }
+        node_bin = shutil.which("node") or shutil.which("nodejs")
+        if node_bin:
+            opts["js_runtimes"] = {"node": {}}
         ffmpeg_bin = self.ffmpeg_path or settings.FFMPEG_PATH or shutil.which("ffmpeg")
         if ffmpeg_bin:
             opts["ffmpeg_location"] = ffmpeg_bin

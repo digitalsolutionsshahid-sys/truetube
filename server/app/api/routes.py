@@ -362,8 +362,12 @@ def direct_stream_download(
         "--concurrent-fragments", "8",
         "--buffer-size", "1048576",
         "--http-chunk-size", "10485760",
-        "--extractor-args", "youtube:player_client=ios,android;player_skip=webpage,configs",
+        "--extractor-args", "youtube:player_client=visionos,android,ios,mweb",
     ]
+
+    node_bin = shutil.which("node") or shutil.which("nodejs")
+    if node_bin:
+        cmd += ["--js-runtimes", "node"]
 
     cookie_file = settings.get_cookie_file()
     if cookie_file:

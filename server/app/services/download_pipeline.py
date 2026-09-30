@@ -153,10 +153,12 @@ class DownloadPipeline:
 
         ydl_opts["extractor_args"] = {
             "youtube": {
-                "player_client": ["ios", "android"],
-                "player_skip": ["webpage", "configs"],
+                "player_client": ["visionos", "android", "ios", "mweb"],
             }
         }
+        node_bin = shutil.which("node") or shutil.which("nodejs")
+        if node_bin:
+            ydl_opts["js_runtimes"] = {"node": {}}
         cookie_file = settings.get_cookie_file()
         if cookie_file:
             ydl_opts["cookiefile"] = cookie_file

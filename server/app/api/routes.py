@@ -362,7 +362,7 @@ def direct_stream_download(
         "--concurrent-fragments", "8",
         "--buffer-size", "1048576",
         "--http-chunk-size", "10485760",
-        "--extractor-args", "youtube:player_client=android,ios,web;player_skip=configs",
+        "--extractor-args", "youtube:player_client=ios,android;player_skip=webpage,configs",
     ]
 
     cookie_file = settings.get_cookie_file()

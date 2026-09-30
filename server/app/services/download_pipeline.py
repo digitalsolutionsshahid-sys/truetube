@@ -153,8 +153,8 @@ class DownloadPipeline:
 
         ydl_opts["extractor_args"] = {
             "youtube": {
-                "player_client": ["android", "ios", "web"],
-                "player_skip": ["configs"],
+                "player_client": ["ios", "android"],
+                "player_skip": ["webpage", "configs"],
             }
         }
         cookie_file = settings.get_cookie_file()

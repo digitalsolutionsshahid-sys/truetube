@@ -107,8 +107,23 @@ class YtDlpService:
         ydl_opts = self._get_base_opts()
 
         def _do_extract():
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                return ydl.extract_info(url, download=False)
+            try:
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    return ydl.extract_info(url, download=False)
+            except yt_dlp.utils.DownloadError as e:
+                err_lower = str(e).lower()
+                if "bot" in err_lower or "sign in" in err_lower or "confirm" in err_lower:
+                    logger.warning("YouTube bot challenge detected on %s, retrying with mobile clients...", url)
+                    fallback_opts = dict(ydl_opts)
+                    fallback_opts["extractor_args"] = {
+                        "youtube": {
+                            "player_client": ["ios", "android"],
+                            "player_skip": ["webpage", "configs"],
+                        }
+                    }
+                    with yt_dlp.YoutubeDL(fallback_opts) as fallback_ydl:
+                        return fallback_ydl.extract_info(url, download=False)
+                raise
 
         try:
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:

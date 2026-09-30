@@ -4,6 +4,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import urlparse
 
 import yt_dlp
 
@@ -161,7 +162,11 @@ class DownloadPipeline:
         # Audio stream ID sanitized
         clean_audio_id = (req.audio_stream_id or "").replace("audio_", "").strip()
 
-        if req.audio_only:
+        parsed_host = (urlparse(job.url).hostname or "").lower()
+        is_audio_domain = any(d in parsed_host for d in ("soundcloud.com", "snd.sc", "mixcloud.com", "bandcamp.com"))
+        effective_audio_only = req.audio_only or is_audio_domain
+
+        if effective_audio_only:
             # Audio-only extraction mode
             target_codec = req.container if req.container in ("mp3", "m4a", "wav", "opus") else "mp3"
             audio_fmt = f"{clean_audio_id}/bestaudio/best" if clean_audio_id else "bestaudio/best"

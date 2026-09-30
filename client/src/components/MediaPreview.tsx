@@ -112,22 +112,24 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({ media }) => {
             </div>
 
             {/* Available Formats */}
-            <div className="flex items-center justify-between py-2 border-b border-[#1E293B]/70">
-              <div className="flex items-center gap-2.5 text-slate-400 text-xs sm:text-sm">
-                <Video className="w-4 h-4 text-indigo-400" />
-                <span>Available Formats</span>
+            {media.available_video_formats && media.available_video_formats.length > 0 && (
+              <div className="flex items-center justify-between py-2 border-b border-[#1E293B]/70">
+                <div className="flex items-center gap-2.5 text-slate-400 text-xs sm:text-sm">
+                  <Video className="w-4 h-4 text-indigo-400" />
+                  <span>Available Formats</span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                  {media.available_video_formats.map((fmt) => (
+                    <span
+                      key={fmt}
+                      className="px-2 py-0.5 rounded bg-slate-800 text-slate-200 text-xs font-mono font-medium border border-slate-700/60"
+                    >
+                      {fmt}
+                    </span>
+                  ))}
+                </div>
               </div>
-              <div className="flex items-center gap-1.5 flex-wrap justify-end">
-                {media.available_video_formats.map((fmt) => (
-                  <span
-                    key={fmt}
-                    className="px-2 py-0.5 rounded bg-slate-800 text-slate-200 text-xs font-mono font-medium border border-slate-700/60"
-                  >
-                    {fmt}
-                  </span>
-                ))}
-              </div>
-            </div>
+            )}
 
             {/* Audio Formats */}
             <div className="flex items-center justify-between py-2 border-b border-[#1E293B]/70">
@@ -148,15 +150,17 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({ media }) => {
             </div>
 
             {/* Subtitles */}
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-2.5 text-slate-400 text-xs sm:text-sm">
-                <Subtitles className="w-4 h-4 text-indigo-400" />
-                <span>Subtitles</span>
+            {media.subtitles && media.subtitles.length > 0 && (
+              <div className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-2.5 text-slate-400 text-xs sm:text-sm">
+                  <Subtitles className="w-4 h-4 text-indigo-400" />
+                  <span>Subtitles</span>
+                </div>
+                <span className="text-slate-300 text-xs sm:text-sm text-right">
+                  {media.subtitles.join(', ')}
+                </span>
               </div>
-              <span className="text-slate-300 text-xs sm:text-sm text-right">
-                {media.subtitles.join(', ')}
-              </span>
-            </div>
+            )}
           </div>
         </div>
 

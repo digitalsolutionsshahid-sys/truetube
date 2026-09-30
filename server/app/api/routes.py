@@ -5,6 +5,7 @@ import subprocess
 import sys
 import threading
 from typing import AsyncGenerator
+from urllib.parse import urlparse
 import yt_dlp.version
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
@@ -348,9 +349,19 @@ def direct_stream_download(
             detail={"error": str(e), "code": "INVALID_URL"},
         )
 
+    parsed_host = (urlparse(clean_url).hostname or "").lower()
+    is_audio_domain = any(d in parsed_host for d in ("soundcloud.com", "snd.sc", "mixcloud.com", "bandcamp.com"))
+    effective_audio_only = audio_only or is_audio_domain
+
+    if effective_audio_only:
+        target_codec = container if container in ("mp3", "m4a", "wav", "opus") else "mp3"
+        target_ext = target_codec
+    else:
+        target_codec = "mp3"
+        target_ext = "mp4"
+
     base_name = title or "download"
     clean_base_name = sanitize_filename(base_name)
-    target_ext = container if audio_only else "mp4"
     safe_filename = f"{clean_base_name}.{target_ext}"
 
     # Build on-the-fly streaming command (piped directly to stdout, zero disk storage)
@@ -372,14 +383,13 @@ def direct_stream_download(
     if settings.FFMPEG_PATH:
         cmd += ["--ffmpeg-location", settings.FFMPEG_PATH]
 
-    if audio_only:
-        target_codec = container if container in ("mp3", "m4a", "wav", "opus") else "mp3"
+    if effective_audio_only:
         cmd += ["-x", "--audio-format", target_codec]
         if audio_stream_id:
             clean_audio_id = audio_stream_id.replace("audio_", "").strip()
-            cmd += ["-f", f"{clean_audio_id}/bestaudio[format_note*=original]/bestaudio[format_note!*=dubbed]/bestaudio"]
+            cmd += ["-f", f"{clean_audio_id}/bestaudio[format_note*=original]/bestaudio[format_note!*=dubbed]/bestaudio/best"]
         else:
-            cmd += ["-f", "bestaudio[format_note*=original]/bestaudio[language_preference>=0]/bestaudio[format_note!*=dubbed]/bestaudio"]
+            cmd += ["-f", "bestaudio[format_note*=original]/bestaudio[language_preference>=0]/bestaudio[format_note!*=dubbed]/bestaudio/best"]
         media_type = f"audio/{target_codec}" if target_codec != "mp3" else "audio/mpeg"
     else:
         if audio_stream_id:

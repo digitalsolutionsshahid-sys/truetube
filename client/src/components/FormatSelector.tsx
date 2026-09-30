@@ -34,7 +34,12 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
   onStartDownload,
   onOpenAdvancedOptions,
 }) => {
-  const [tab, setTab] = useState<'video' | 'audio'>(initialTab);
+  const isAudioOnly =
+    (media.available_video_formats && media.available_video_formats.length === 0) ||
+    media.formats.length === 0 ||
+    media.source_domain.includes('soundcloud');
+
+  const [tab, setTab] = useState<'video' | 'audio'>(() => (isAudioOnly ? 'audio' : initialTab));
   const [selectedFormat, setSelectedFormat] = useState<FormatContainer>('mp4');
   const [selectedQualityId, setSelectedQualityId] = useState<string>(() => {
     if (initialQualityPreset === '1080p') {
@@ -62,11 +67,12 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
   const handleDownload = () => {
     const chosenFormat = media.formats.find((f) => f.id === selectedQualityId);
     const chosenAudio = media.audio_streams.find((a) => a.id === selectedAudioId);
+    const effectiveAudioOnly = isAudioOnly || tab === 'audio';
     onStartDownload({
-      format: tab === 'video' ? selectedFormat : (selectedAudioFormat as any),
+      format: effectiveAudioOnly ? (selectedAudioFormat as any) : selectedFormat,
       qualityId: chosenFormat?.format_id || selectedQualityId,
       audioStreamId: chosenAudio?.format_id || selectedAudioId,
-      audioOnly: tab === 'audio',
+      audioOnly: effectiveAudioOnly,
     });
   };
 
@@ -111,18 +117,20 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
       <div className="bg-[#0D111D] border border-[#1E293B] rounded-3xl p-5 sm:p-7 shadow-2xl">
         {/* Mode Selector Tabs */}
         <div className="flex items-center gap-2 p-1 bg-slate-900/80 rounded-xl border border-slate-800 w-fit mb-6">
-          <button
-            type="button"
-            onClick={() => setTab('video')}
-            className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
-              tab === 'video'
-                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <VideoIcon className="w-4 h-4" />
-            <span>Video</span>
-          </button>
+          {!isAudioOnly && (
+            <button
+              type="button"
+              onClick={() => setTab('video')}
+              className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+                tab === 'video'
+                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <VideoIcon className="w-4 h-4" />
+              <span>Video</span>
+            </button>
+          )}
           <button
             type="button"
             onClick={() => setTab('audio')}
@@ -133,7 +141,7 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
             }`}
           >
             <Music className="w-4 h-4" />
-            <span>Audio</span>
+            <span>{isAudioOnly ? 'Audio Track' : 'Audio'}</span>
           </button>
         </div>
 
@@ -342,7 +350,7 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
         {isDownloading && (
           <div className="flex items-center justify-center gap-2.5 p-3.5 rounded-xl bg-indigo-950/50 border border-indigo-500/30 text-indigo-300 text-xs sm:text-sm animate-pulse mb-4">
             <Loader2 className="w-4 h-4 animate-spin text-indigo-400 flex-shrink-0" />
-            <span>Fetching Video... Download starting shortly.</span>
+            <span>{tab === 'audio' || isAudioOnly ? 'Fetching Audio... Download starting shortly.' : 'Fetching Video... Download starting shortly.'}</span>
           </div>
         )}
 
@@ -361,12 +369,12 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
             {isDownloading ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin text-white" />
-                <span>Fetching Video...</span>
+                <span>{tab === 'audio' || isAudioOnly ? 'Fetching Audio...' : 'Fetching Video...'}</span>
               </>
             ) : (
               <>
                 <Download className="w-5 h-5" />
-                <span>Download</span>
+                <span>{tab === 'audio' || isAudioOnly ? 'Download Audio' : 'Download'}</span>
               </>
             )}
           </button>

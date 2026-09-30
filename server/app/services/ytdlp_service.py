@@ -130,12 +130,16 @@ class YtDlpService:
                     info = future.result(timeout=timeout)
                 except (TimeoutError, concurrent.futures.TimeoutError):
                     raise MediaNetworkError(f"Media analysis timed out after {timeout} seconds.")
-        except yt_dlp.utils.UnsupportedURL as e:
+        except (yt_dlp.utils.UnsupportedError, yt_dlp.utils.ExtractorError) as e:
             raise UnsupportedMediaSourceError(f"TrueTube does not currently support this URL: {e}")
+        except yt_dlp.utils.GeoRestrictedError as e:
+            raise UnsupportedMediaSourceError(f"This item is geo-restricted in this server region: {e}")
         except yt_dlp.utils.DownloadError as e:
             err_msg = str(e).lower()
-            if "private video" in err_msg or "sign in" in err_msg or "restricted" in err_msg:
-                raise UnsupportedMediaSourceError("This video is private, restricted, or requires authentication.")
+            if "geo restriction" in err_msg or "not available from your location" in err_msg:
+                raise UnsupportedMediaSourceError("This track is not available in this region due to SoundCloud/creator geo-restrictions.")
+            elif "private" in err_msg or "sign in" in err_msg or "restricted" in err_msg:
+                raise UnsupportedMediaSourceError("This media item is private, restricted, or requires authentication.")
             elif "not found" in err_msg or "404" in err_msg or "incomplete" in err_msg:
                 raise InvalidMediaUrlError("The media item was not found or is unavailable.")
             elif "connection" in err_msg or "network" in err_msg or "timed out" in err_msg:
@@ -297,11 +301,16 @@ class YtDlpService:
                     )
                 )
 
+        # Check if source is strictly audio-only (e.g., SoundCloud, Bandcamp, or no video streams)
+        is_audio_only_source = (len(available_video_containers) == 0) or any(
+            d in domain for d in ("soundcloud.com", "snd.sc", "mixcloud.com", "bandcamp.com")
+        )
+
         # Sort video formats descending by height
         sorted_formats = [video_formats_map[h] for h in sorted(video_formats_map.keys(), reverse=True)]
 
-        # If no video formats matched tiers, add raw best
-        if not sorted_formats:
+        # If not audio-only and no video formats matched tiers, add raw best
+        if not is_audio_only_source and not sorted_formats:
             sorted_formats.append(
                 FormatItem(
                     id="best",
@@ -361,7 +370,19 @@ class YtDlpService:
         if len(all_subs) > 4:
             sub_display_list.append(f"+{len(all_subs) - 4}")
 
-        approx_size_total = format_bytes(best_video_size) if best_video_size else "328 MB"
+        if is_audio_only_source:
+            if audio_streams and audio_streams[0].filesize:
+                approx_size_total = format_bytes(audio_streams[0].filesize)
+            elif duration > 0:
+                approx_size_total = format_bytes(int((320 * 1024 / 8) * duration))
+            else:
+                approx_size_total = "~6 MB"
+            available_video_formats = []
+            subtitles_list = sub_display_list
+        else:
+            approx_size_total = format_bytes(best_video_size) if best_video_size else "328 MB"
+            available_video_formats = sorted(list(available_video_containers)) or ["MP4", "WebM", "MKV"]
+            subtitles_list = sub_display_list or ["English"]
 
         return MediaInfoResponse(
             url=url,
@@ -376,10 +397,10 @@ class YtDlpService:
             upload_date=upload_date,
             source_domain=domain,
             approx_size_str=approx_size_total,
-            available_video_formats=sorted(list(available_video_containers)) or ["MP4", "WebM", "MKV"],
+            available_video_formats=available_video_formats,
             available_audio_formats=sorted(list(available_audio_containers)) or ["MP3", "M4A", "AAC"],
-            subtitles=sub_display_list or ["English"],
-            formats=sorted_formats,
+            subtitles=subtitles_list,
+            formats=sorted_formats if not is_audio_only_source else [],
             audio_streams=audio_streams,
         )
 

@@ -159,18 +159,25 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
     audioStreamId: string;
     audioOnly: boolean;
   }) => {
+    const isAudioSource =
+      (media.available_video_formats && media.available_video_formats.length === 0) ||
+      media.formats.length === 0 ||
+      media.source_domain.includes('soundcloud');
+    const effectiveAudioOnly = options.audioOnly || isAudioSource || advancedConfig.audio_only;
+    const effectiveFormat = effectiveAudioOnly ? (options.format || 'mp3') : 'mp4';
+
     const token = 'dl_' + Date.now();
     setIsDownloadingInChrome(true);
-    addToast('info', 'Fetching Video...', 'Download starting shortly.');
+    addToast('info', effectiveAudioOnly ? 'Fetching Audio...' : 'Fetching Video...', 'Download starting shortly.');
 
     try {
       const directDownloadUrl = getDirectDownloadUrl({
         url: media.url,
         title: media.title,
         format_id: options.qualityId,
-        container: options.audioOnly ? options.format : 'mp4',
+        container: effectiveFormat,
         audio_stream_id: options.audioStreamId,
-        audio_only: options.audioOnly || advancedConfig.audio_only,
+        audio_only: effectiveAudioOnly,
         subtitles: advancedConfig.subtitles_enabled ? advancedConfig.subtitle_lang : undefined,
         embed_metadata: advancedConfig.embed_metadata,
         embed_thumbnail: advancedConfig.embed_thumbnail,
@@ -216,8 +223,8 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
             id: `rec_${Date.now()}`,
             title: media.title,
             thumbnail: media.thumbnail,
-            format: (options.audioOnly ? options.format : 'mp4').toUpperCase(),
-            quality: options.audioOnly ? 'Audio' : options.qualityId.toUpperCase(),
+            format: effectiveFormat.toUpperCase(),
+            quality: effectiveAudioOnly ? 'Audio (320kbps)' : options.qualityId.toUpperCase(),
             file_size: 'Chrome Download',
             timestamp: 'Just now',
             status: 'Completed',

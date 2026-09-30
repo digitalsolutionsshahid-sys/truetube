@@ -1,6 +1,9 @@
 FROM python:3.11-slim
 
-# Install system dependencies, FFmpeg, and Node.js for YouTube JS player challenges
+# Copy official Deno binary (first-class JS engine for yt-dlp)
+COPY --from=denoland/deno:bin /deno /usr/local/bin/deno
+
+# Install system dependencies, FFmpeg, and Node.js
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     ca-certificates \

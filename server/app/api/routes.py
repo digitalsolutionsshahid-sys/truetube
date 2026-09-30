@@ -363,7 +363,6 @@ def direct_stream_download(
         "--buffer-size", "1048576",
         "--http-chunk-size", "10485760",
         "--remote-components", "ejs:github",
-        "--extractor-args", "youtube:player_client=android,web",
     ]
 
     cookie_file = settings.get_cookie_file()

@@ -90,11 +90,6 @@ class YtDlpService:
             "socket_timeout": 20,
             "noprogress": True,
             "remote_components": ["ejs:github"],
-            "extractor_args": {
-                "youtube": {
-                    "player_client": ["android", "web"],
-                }
-            },
         }
         if cookie_file:
             opts["cookiefile"] = cookie_file

@@ -152,11 +152,6 @@ class DownloadPipeline:
             ydl_opts["ffmpeg_location"] = settings.FFMPEG_PATH
 
         ydl_opts["remote_components"] = ["ejs:github"]
-        ydl_opts["extractor_args"] = {
-            "youtube": {
-                "player_client": ["android", "web"],
-            }
-        }
         cookie_file = settings.get_cookie_file()
         if cookie_file:
             ydl_opts["cookiefile"] = cookie_file

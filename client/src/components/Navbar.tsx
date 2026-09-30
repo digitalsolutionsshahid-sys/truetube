@@ -1,5 +1,5 @@
 import React from 'react';
-import { Zap, Sparkles, MessageCircle } from 'lucide-react';
+import { Zap, Sparkles } from 'lucide-react';
 import { useRouter } from '../router/useRouter';
 import type { AppRoute } from '../router/routes';
 
@@ -50,7 +50,7 @@ export const Navbar: React.FC = () => {
           })}
         </nav>
 
-        {/* Right CTA / TrueLife Academy & WhatsApp */}
+        {/* Right CTA / TrueLife Academy */}
         <div className="flex items-center gap-2 sm:gap-3">
           <a
             href="https://web.facebook.com/TrueLifeAcademyOfficial/"
@@ -62,19 +62,6 @@ export const Navbar: React.FC = () => {
             <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
             <span className="hidden sm:inline">Made by</span>
             <span className="text-white font-bold">TrueLife Academy</span>
-          </a>
-
-          <a
-            href="https://wa.me/923331200038?text=Hi%20TrueLife%20Academy%2C%20I%20have%20an%20inquiry%20regarding%20courses."
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-xs font-medium text-emerald-300 hover:text-white hover:bg-emerald-600/20 hover:border-emerald-500/60 transition-all shadow-sm shadow-emerald-500/10"
-            title="Chat on WhatsApp: 03331200038"
-            aria-label="WhatsApp Contact"
-          >
-            <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden md:inline font-mono font-semibold">03331200038</span>
-            <span className="md:hidden font-semibold">WhatsApp</span>
           </a>
         </div>
       </div>

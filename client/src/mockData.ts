@@ -105,45 +105,5 @@ export const MOCK_MEDIA_METADATA: MediaMetadata = {
   ],
 };
 
-export const MOCK_RECENT_DOWNLOADS: RecentDownloadItem[] = [
-  {
-    id: 'rec_1',
-    title: 'The Most Beautiful Places on Earth 4K',
-    thumbnail: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=400&q=80',
-    format: 'MP4',
-    quality: '4K',
-    file_size: '1.2 GB',
-    timestamp: 'Apr 12, 2024',
-    status: 'Completed',
-  },
-  {
-    id: 'rec_2',
-    title: 'Gaming Music Mix 2024',
-    thumbnail: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=400&q=80',
-    format: 'MP3',
-    quality: '320 kbps',
-    file_size: '85 MB',
-    timestamp: 'Apr 11, 2024',
-    status: 'Completed',
-  },
-  {
-    id: 'rec_3',
-    title: 'Python Full Course',
-    thumbnail: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=400&q=80',
-    format: 'MP4',
-    quality: '1080p',
-    file_size: '1.1 GB',
-    timestamp: 'Apr 10, 2024',
-    status: 'Completed',
-  },
-  {
-    id: 'rec_4',
-    title: 'Best of NCS Music',
-    thumbnail: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=400&q=80',
-    format: 'MP3',
-    quality: '320 kbps',
-    file_size: '120 MB',
-    timestamp: 'Apr 8, 2024',
-    status: 'Completed',
-  },
-];
+export const MOCK_RECENT_DOWNLOADS: RecentDownloadItem[] = [];
+

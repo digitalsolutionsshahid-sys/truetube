@@ -78,7 +78,7 @@ export const Footer: React.FC = () => {
               onClick={() => navigateTo('about')}
               className="hover:text-white transition-colors cursor-pointer"
             >
-              About Academy
+              About
             </button>
             <a
               href="https://web.facebook.com/TrueLifeAcademyOfficial/"
@@ -110,8 +110,9 @@ export const Footer: React.FC = () => {
         {/* Legal Disclaimer & Copyright */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500 text-center sm:text-left">
           <p>
-            © {new Date().getFullYear()} TrueTube. All rights reserved. Made with{' '}
-            <Heart className="w-3 h-3 inline text-red-500 fill-red-500" /> by TrueLife Academy.
+            &copy; {new Date().getFullYear()} TrueTube. All rights reserved. Made with&nbsp;
+            <Heart className="w-3.5 h-3.5 inline text-rose-500 fill-rose-500 mx-0.5 align-baseline" />
+            &nbsp;by TrueLife Academy.
           </p>
           <p className="max-w-md">
             Please respect creator copyright. TrueTube is intended for personal media backups and legally authorized downloads.

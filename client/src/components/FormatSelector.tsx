@@ -15,6 +15,8 @@ import type { MediaMetadata, FormatContainer } from '../types/media';
 interface FormatSelectorProps {
   media: MediaMetadata;
   isDownloading?: boolean;
+  initialTab?: 'video' | 'audio';
+  initialQualityPreset?: 'best' | '1080p' | '720p' | 'audio_320';
   onStartDownload: (options: {
     format: FormatContainer;
     qualityId: string;
@@ -27,14 +29,23 @@ interface FormatSelectorProps {
 export const FormatSelector: React.FC<FormatSelectorProps> = ({
   media,
   isDownloading = false,
+  initialTab = 'video',
+  initialQualityPreset = 'best',
   onStartDownload,
   onOpenAdvancedOptions,
 }) => {
-  const [tab, setTab] = useState<'video' | 'audio'>('video');
+  const [tab, setTab] = useState<'video' | 'audio'>(initialTab);
   const [selectedFormat, setSelectedFormat] = useState<FormatContainer>('mp4');
-  const [selectedQualityId, setSelectedQualityId] = useState<string>(
-    media.formats.find((f) => f.is_recommended)?.id || media.formats[0]?.id || 'best_4k'
-  );
+  const [selectedQualityId, setSelectedQualityId] = useState<string>(() => {
+    if (initialQualityPreset === '1080p') {
+      const match = media.formats.find((f) => f.height === 1080 || f.label.includes('1080p'));
+      if (match) return match.id;
+    } else if (initialQualityPreset === '720p') {
+      const match = media.formats.find((f) => f.height === 720 || f.label.includes('720p'));
+      if (match) return match.id;
+    }
+    return media.formats.find((f) => f.is_recommended)?.id || media.formats[0]?.id || 'best_4k';
+  });
   const [selectedAudioId, setSelectedAudioId] = useState<string>(
     media.audio_streams.find((a) => a.is_default)?.id || media.audio_streams[0]?.id || 'audio_aac'
   );

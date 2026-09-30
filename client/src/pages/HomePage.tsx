@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { HeroInput } from '../components/HeroInput';
+import type { FormatPreset, QualityPreset } from '../components/HeroInput';
 import { AnalyzingState } from '../components/AnalyzingState';
 import { MediaPreview } from '../components/MediaPreview';
 import { FormatSelector } from '../components/FormatSelector';
@@ -8,13 +9,28 @@ import { RecentDownloads } from '../components/RecentDownloads';
 import { ErrorCard } from '../components/ErrorCards';
 import type { ErrorType } from '../components/ErrorCards';
 import { ThreeDScene } from '../components/ThreeDScene';
+import { useRouter } from '../router/useRouter';
+import {
+  Zap,
+  Sparkles,
+  Layers,
+  CheckCircle,
+  Music,
+  ArrowRight,
+  ChevronDown,
+  Video,
+  Lock,
+  Globe,
+  Radio,
+  Tv,
+} from 'lucide-react';
 import type {
   MediaMetadata,
   AdvancedOptionsConfig,
   RecentDownloadItem,
   FormatContainer,
 } from '../types/media';
-import { MOCK_MEDIA_METADATA, MOCK_RECENT_DOWNLOADS } from '../mockData';
+import { MOCK_MEDIA_METADATA } from '../mockData';
 import {
   analyzeMedia,
   getDirectDownloadUrl,
@@ -27,6 +43,8 @@ interface HomePageProps {
 }
 
 export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
+  const { navigateTo } = useRouter();
+
   // Navigation & Flow State
   const [url, setUrl] = useState<string>('');
   const [appState, setAppState] = useState<
@@ -37,10 +55,17 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
     | 'ERROR'
   >('IDLE');
 
+  // Format and Quality Preference Presets (configured on first load)
+  const [formatPreset, setFormatPreset] = useState<FormatPreset>('mp4');
+  const [qualityPreset, setQualityPreset] = useState<QualityPreset>('best');
+
   // Media State
   const [media, setMedia] = useState<MediaMetadata>(MOCK_MEDIA_METADATA);
   const [isDownloadingInChrome, setIsDownloadingInChrome] = useState(false);
   const downloadTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // FAQ Accordion State for Homepage Teaser
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   // Advanced Options State
   const [isAdvancedOpen, setIsAdvancedOpen] = useState(false);
@@ -55,7 +80,7 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
     container: 'mp4',
   });
 
-  // Recent Downloads State (persisted to localStorage)
+  // Recent Downloads State (persisted to localStorage — defaults to genuine empty array)
   const [recentDownloads, setRecentDownloads] = useState<RecentDownloadItem[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -65,9 +90,9 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
           return parsed;
         }
       }
-      return MOCK_RECENT_DOWNLOADS;
+      return [];
     } catch {
-      return MOCK_RECENT_DOWNLOADS;
+      return [];
     }
   });
 
@@ -139,7 +164,6 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
     audioStreamId: string;
     audioOnly: boolean;
   }) => {
-    // Unique token to detect when Chrome receives the download stream from server
     const token = 'dl_' + Date.now();
     setIsDownloadingInChrome(true);
     addToast('info', 'Fetching Video...', 'Download starting shortly.');
@@ -230,18 +254,191 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
     }
   };
 
+  // Supported Platforms List for Chip Strip
+  const supportedPlatforms = [
+    { name: 'YouTube', icon: Tv, color: 'text-red-400' },
+    { name: 'TikTok', icon: Music, color: 'text-cyan-400' },
+    { name: 'Vimeo', icon: Video, color: 'text-sky-400' },
+    { name: 'Instagram', icon: Sparkles, color: 'text-pink-400' },
+    { name: 'X / Twitter', icon: Globe, color: 'text-slate-300' },
+    { name: 'Facebook', icon: Globe, color: 'text-blue-400' },
+    { name: 'SoundCloud', icon: Radio, color: 'text-amber-400' },
+    { name: 'Reddit', icon: Globe, color: 'text-orange-400' },
+    { name: 'Twitch', icon: Tv, color: 'text-purple-400' },
+    { name: '1000+ More', icon: Zap, color: 'text-indigo-400' },
+  ];
+
+  // 6 Features Cards
+  const featureList = [
+    {
+      icon: Globe,
+      title: '1,000+ Sites Supported',
+      desc: 'Native compatibility with YouTube, TikTok, Vimeo, Twitter, Instagram, and over a thousand streaming platforms via yt-dlp.',
+    },
+    {
+      icon: Sparkles,
+      title: 'Authentic 4K / 8K Video',
+      desc: 'Grab pristine native video up to 4K Ultra HD and 60fps with zero recompression or quality loss.',
+    },
+    {
+      icon: Music,
+      title: 'High-Bitrate MP3 Audio',
+      desc: 'Extract crystal-clear audio tracks up to 320kbps MP3 or lossless M4A with metadata embedded.',
+    },
+    {
+      icon: CheckCircle,
+      title: 'Zero Watermarks',
+      desc: 'Pure, clean media downloads directly from the source server without artificial logos or banners.',
+    },
+    {
+      icon: Layers,
+      title: 'Subtitles & Captions',
+      desc: 'Automatically package multi-language closed captions and subtitle tracks into your MP4 container.',
+    },
+    {
+      icon: Lock,
+      title: 'Secure & Private',
+      desc: 'Links are processed strictly in memory and temporary stream files are immediately purged upon delivery.',
+    },
+  ];
+
+  // FAQ Teaser Questions
+  const homepageFaqs = [
+    {
+      q: 'Is TrueTube free and ad-free?',
+      a: 'Yes, TrueTube is completely free and contains zero popups, malicious redirects, or intrusive advertisements.',
+    },
+    {
+      q: 'Why does TrueTube focus on MP4 for video?',
+      a: 'MP4 (with H.264 video and AAC audio) is universally compatible across all devices, including iPhones, Android phones, Mac, Windows PCs, and video editing suites.',
+    },
+    {
+      q: 'Does TrueTube store my downloaded files or URLs?',
+      a: 'No. Links are processed in memory and temporary file chunks are automatically deleted from server storage the instant they reach your browser.',
+    },
+    {
+      q: 'Can I extract high-quality audio only?',
+      a: 'Yes! Select the Audio (MP3) format option above or switch to the Audio tab on the format selector to download pristine audio up to 320kbps.',
+    },
+  ];
+
   return (
-    <div className="space-y-12">
+    <div className="space-y-10">
       {appState === 'IDLE' && (
         <>
+          {/* Hero Section */}
           <div className="relative">
             <ThreeDScene />
             <HeroInput
               url={url}
               onChangeUrl={setUrl}
               onAnalyze={handleAnalyze}
+              isAnalyzing={false}
+              selectedFormat={formatPreset}
+              onSelectFormat={setFormatPreset}
+              selectedQuality={qualityPreset}
+              onSelectQuality={setQualityPreset}
             />
           </div>
+
+          {/* Supported Platforms Strip */}
+          <section className="max-w-5xl mx-auto px-4 -mt-4">
+            <div className="p-4 rounded-2xl bg-[#0D111D]/80 border border-[#1E293B] shadow-xl">
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center mb-3">
+                Supported Media Platforms & Streaming Services
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
+                {supportedPlatforms.map((p) => {
+                  const Icon = p.icon;
+                  return (
+                    <div
+                      key={p.name}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-medium text-slate-300 hover:border-slate-700 transition-colors"
+                    >
+                      <Icon className={`w-3.5 h-3.5 ${p.color}`} />
+                      <span>{p.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+
+          {/* 3-Step "How It Works" Strip directly under hero */}
+          <section className="max-w-5xl mx-auto px-4 pt-2">
+            <div className="text-center mb-6">
+              <span className="text-xs font-semibold text-indigo-400 tracking-wider uppercase">
+                Fast & Intuitive
+              </span>
+              <h2 className="text-xl sm:text-2xl font-bold text-white mt-1">
+                How TrueTube Works
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-5 rounded-2xl bg-[#0D111D] border border-[#1E293B] hover:border-indigo-500/30 transition-all shadow-xl group">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-mono font-bold text-sm mb-3.5 group-hover:scale-105 transition-transform">
+                  01
+                </div>
+                <h3 className="text-sm font-bold text-white mb-1">1. Paste Video URL</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Copy any media link from YouTube, TikTok, Vimeo, or 1000+ sites and paste it in the field above.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[#0D111D] border border-[#1E293B] hover:border-indigo-500/30 transition-all shadow-xl group">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-mono font-bold text-sm mb-3.5 group-hover:scale-105 transition-transform">
+                  02
+                </div>
+                <h3 className="text-sm font-bold text-white mb-1">2. Choose Format & Quality</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Select your desired MP4 resolution up to 4K or switch to high-bitrate MP3 audio extraction.
+                </p>
+              </div>
+
+              <div className="p-5 rounded-2xl bg-[#0D111D] border border-[#1E293B] hover:border-indigo-500/30 transition-all shadow-xl group">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-mono font-bold text-sm mb-3.5 group-hover:scale-105 transition-transform">
+                  03
+                </div>
+                <h3 className="text-sm font-bold text-white mb-1">3. Direct Download</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                  Streams merge automatically and download straight into Chrome with zero server retention.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* 6-Card Features Grid */}
+          <section className="max-w-5xl mx-auto px-4 pt-2">
+            <div className="text-center mb-6">
+              <span className="text-xs font-semibold text-indigo-400 tracking-wider uppercase">
+                Engineered for Excellence
+              </span>
+              <h2 className="text-xl sm:text-2xl font-bold text-white mt-1">
+                Why Creators Prefer TrueTube
+              </h2>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {featureList.map((f) => {
+                const Icon = f.icon;
+                return (
+                  <div
+                    key={f.title}
+                    className="p-5 rounded-2xl bg-[#0D111D] border border-[#1E293B] hover:border-indigo-500/40 hover:bg-[#131B2E] transition-all shadow-xl group"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-indigo-600/15 text-indigo-400 flex items-center justify-center mb-3 border border-indigo-500/20 group-hover:scale-110 transition-transform">
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <h4 className="text-sm font-bold text-white mb-1">{f.title}</h4>
+                    <p className="text-xs text-slate-400 leading-relaxed">{f.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {/* Recent Downloads (Clean Empty State or Real History) */}
           <RecentDownloads
             items={recentDownloads}
             onClearHistory={() => {
@@ -251,6 +448,60 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
             onRedownload={handleRedownloadItem}
             onViewAll={() => setAppState('RECENT_DOWNLOADS')}
           />
+
+          {/* FAQ Teaser Accordion on Homepage */}
+          <section className="max-w-4xl mx-auto px-4 pt-4">
+            <div className="text-center mb-6">
+              <span className="text-xs font-semibold text-indigo-400 tracking-wider uppercase">
+                Common Questions
+              </span>
+              <h2 className="text-xl sm:text-2xl font-bold text-white mt-1">
+                Frequently Asked Questions
+              </h2>
+            </div>
+
+            <div className="space-y-2.5">
+              {homepageFaqs.map((faq, idx) => {
+                const isOpen = openFaq === idx;
+                return (
+                  <div
+                    key={faq.q}
+                    className="rounded-2xl bg-[#0D111D] border border-[#1E293B] overflow-hidden transition-all duration-200"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setOpenFaq(isOpen ? null : idx)}
+                      className="w-full flex items-center justify-between p-4 sm:p-5 text-left text-sm sm:text-base font-semibold text-white hover:text-indigo-300 transition-colors cursor-pointer"
+                      aria-expanded={isOpen}
+                    >
+                      <span>{faq.q}</span>
+                      <ChevronDown
+                        className={`w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ml-4 ${
+                          isOpen ? 'rotate-180 text-indigo-400' : ''
+                        }`}
+                      />
+                    </button>
+                    {isOpen && (
+                      <div className="px-4 sm:px-5 pb-4 pt-1 text-xs sm:text-sm text-slate-400 leading-relaxed border-t border-[#1E293B]/60">
+                        {faq.a}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-5 text-center">
+              <button
+                type="button"
+                onClick={() => navigateTo('faq')}
+                className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-medium hover:underline transition-all cursor-pointer"
+              >
+                <span>View all frequently asked questions</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </section>
         </>
       )}
 
@@ -278,6 +529,8 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
           <FormatSelector
             key={media.url}
             media={media}
+            initialTab={formatPreset === 'mp3' ? 'audio' : 'video'}
+            initialQualityPreset={qualityPreset}
             isDownloading={isDownloadingInChrome}
             onStartDownload={handleStartDownload}
             onOpenAdvancedOptions={() => setIsAdvancedOpen(true)}

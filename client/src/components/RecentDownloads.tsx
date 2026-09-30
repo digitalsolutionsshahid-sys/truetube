@@ -1,5 +1,5 @@
 import React from 'react';
-import { History, Download, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { History, Download, ArrowRight, CheckCircle2, Sparkles } from 'lucide-react';
 import type { RecentDownloadItem } from '../types/media';
 
 interface RecentDownloadsProps {
@@ -15,10 +15,27 @@ export const RecentDownloads: React.FC<RecentDownloadsProps> = ({
   onClearHistory,
   onViewAll,
 }) => {
-  if (!items || items.length === 0) return null;
+  if (!items || items.length === 0) {
+    return (
+      <section className="w-full max-w-5xl mx-auto px-4 py-4">
+        <div className="bg-[#0D111D] border border-[#1E293B] rounded-3xl p-8 sm:p-10 shadow-2xl text-center relative overflow-hidden group">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center mx-auto mb-3.5 group-hover:scale-105 transition-transform">
+            <History className="w-6 h-6" />
+          </div>
+          <h3 className="text-base sm:text-lg font-bold text-white mb-1.5 flex items-center justify-center gap-2">
+            <span>No downloads yet</span>
+            <Sparkles className="w-4 h-4 text-indigo-400" />
+          </h3>
+          <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
+            Paste any media link above to start downloading. Your completed downloads will safely appear here for one-click re-downloading.
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className="w-full max-w-5xl mx-auto px-4 py-8">
+    <section className="w-full max-w-5xl mx-auto px-4 py-4">
       <div className="bg-[#0D111D] border border-[#1E293B] rounded-3xl p-6 sm:p-7 shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-6 pb-4 border-b border-[#1E293B]">
@@ -36,21 +53,23 @@ export const RecentDownloads: React.FC<RecentDownloadsProps> = ({
               <button
                 type="button"
                 onClick={onClearHistory}
-                className="text-xs text-slate-500 hover:text-slate-300 transition-colors"
+                className="text-xs text-slate-500 hover:text-slate-300 transition-colors cursor-pointer"
                 aria-label="Clear download history"
               >
                 Clear
               </button>
             )}
-            <button
-              type="button"
-              onClick={onViewAll}
-              className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium transition-colors"
-              aria-label="View all recent downloads"
-            >
-              <span>View all</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            {onViewAll && (
+              <button
+                type="button"
+                onClick={onViewAll}
+                className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium transition-colors cursor-pointer"
+                aria-label="View all recent downloads"
+              >
+                <span>View all</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -94,7 +113,7 @@ export const RecentDownloads: React.FC<RecentDownloadsProps> = ({
                 <button
                   type="button"
                   onClick={() => onRedownload?.(item)}
-                  className="p-2 sm:p-2.5 rounded-xl border border-slate-700/70 bg-slate-900/60 hover:bg-indigo-600 hover:border-indigo-500 text-slate-300 hover:text-white transition-all shadow-sm active:scale-95"
+                  className="p-2 sm:p-2.5 rounded-xl border border-slate-700/70 bg-slate-900/60 hover:bg-indigo-600 hover:border-indigo-500 text-slate-300 hover:text-white transition-all shadow-sm active:scale-95 cursor-pointer"
                   title="Download File"
                 >
                   <Download className="w-4 h-4" />

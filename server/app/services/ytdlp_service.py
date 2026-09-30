@@ -80,29 +80,32 @@ class YtDlpService:
         self.ffmpeg_path = settings.FFMPEG_PATH
 
     def _get_base_opts(self) -> dict[str, Any]:
+        cookie_file = settings.get_cookie_file()
         opts: dict[str, Any] = {
             "quiet": True,
             "no_warnings": True,
             "noplaylist": True,
             "extract_flat": False,
             "skip_download": True,
-            "socket_timeout": 15,
+            "socket_timeout": 20,
             "noprogress": True,
-            "extractor_args": {
+            "remote_components": ["ejs:github"],
+        }
+        if not cookie_file:
+            opts["extractor_args"] = {
                 "youtube": {
                     "player_client": ["visionos", "android", "ios", "mweb"],
                 }
-            },
-        }
+            }
+        else:
+            opts["cookiefile"] = cookie_file
+
         node_bin = shutil.which("node") or shutil.which("nodejs")
         if node_bin:
             opts["js_runtimes"] = {"node": {}}
         ffmpeg_bin = self.ffmpeg_path or settings.FFMPEG_PATH or shutil.which("ffmpeg")
         if ffmpeg_bin:
             opts["ffmpeg_location"] = ffmpeg_bin
-        cookie_file = settings.get_cookie_file()
-        if cookie_file:
-            opts["cookiefile"] = cookie_file
         return opts
 
     def extract_info(self, url: str, timeout: int = 30) -> MediaInfoResponse:

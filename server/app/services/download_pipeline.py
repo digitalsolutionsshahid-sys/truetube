@@ -157,12 +157,24 @@ class DownloadPipeline:
         if cookie_file:
             ydl_opts["cookiefile"] = cookie_file
 
+        # Parse host once — used for both YouTube detection and audio-domain detection
+        parsed_host = (urlparse(job.url).hostname or "").lower()
+
+        # For YouTube URLs: use tv_embedded + android + mweb player clients to bypass
+        # JS runtime requirement (deno) and avoid bot-detection / sign-in challenges.
+        is_youtube = "youtube.com" in parsed_host or "youtu.be" in parsed_host
+        if is_youtube:
+            ydl_opts["extractor_args"] = {
+                "youtube": {
+                    "player_client": ["tv_embedded", "android", "mweb"],
+                }
+            }
+
         postprocessors = []
 
         # Audio stream ID sanitized
         clean_audio_id = (req.audio_stream_id or "").replace("audio_", "").strip()
 
-        parsed_host = (urlparse(job.url).hostname or "").lower()
         is_audio_domain = any(d in parsed_host for d in ("soundcloud.com", "snd.sc", "mixcloud.com", "bandcamp.com"))
         effective_audio_only = req.audio_only or is_audio_domain
 

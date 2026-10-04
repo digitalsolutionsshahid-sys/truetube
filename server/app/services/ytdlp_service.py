@@ -106,17 +106,32 @@ class YtDlpService:
         ydl_opts = self._get_base_opts()
 
         def _do_extract():
+            # Determine if this is a YouTube URL for player client selection
+            parsed_host = (urlparse(url).hostname or "").lower()
+            is_youtube = "youtube.com" in parsed_host or "youtu.be" in parsed_host
+
+            # For YouTube: use tv_embedded + android + mweb player clients to bypass
+            # JS runtime requirement and avoid bot-detection / sign-in challenges.
+            # These native API clients don't require JS signature decryption.
+            primary_opts = dict(ydl_opts)
+            if is_youtube:
+                primary_opts["extractor_args"] = {
+                    "youtube": {
+                        "player_client": ["tv_embedded", "android", "mweb"],
+                    }
+                }
+
             try:
-                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                with yt_dlp.YoutubeDL(primary_opts) as ydl:
                     return ydl.extract_info(url, download=False)
             except yt_dlp.utils.DownloadError as e:
                 err_lower = str(e).lower()
-                if "bot" in err_lower or "sign in" in err_lower or "confirm" in err_lower or "reload" in err_lower:
-                    logger.warning("YouTube challenge/reload detected on %s, retrying with android client...", url)
+                if "bot" in err_lower or "sign in" in err_lower or "confirm" in err_lower or "reload" in err_lower or "precondition" in err_lower:
+                    logger.warning("YouTube challenge/reload detected on %s, retrying with ios client...", url)
                     fallback_opts = dict(ydl_opts)
                     fallback_opts["extractor_args"] = {
                         "youtube": {
-                            "player_client": ["android"],
+                            "player_client": ["ios", "android_vr"],
                         }
                     }
                     with yt_dlp.YoutubeDL(fallback_opts) as fallback_ydl:

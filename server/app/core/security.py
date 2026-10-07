@@ -1,6 +1,7 @@
 import ipaddress
 import re
 import socket
+import urllib.parse
 from urllib.parse import urlparse
 
 class SecurityValidationError(ValueError):
@@ -193,3 +194,25 @@ def sanitize_filename(filename: str, fallback_ext: str = "mp4") -> str:
             name = name[:200]
 
     return name
+
+def make_content_disposition(filename: str, disposition_type: str = "attachment") -> str:
+    """
+    Constructs an RFC 6266 / RFC 5987 compliant Content-Disposition header value
+    that safely supports non-ASCII characters, emojis, and international titles
+    without crashing Starlette's latin-1 HTTP header encoder.
+    """
+    # 1. ASCII fallback for legacy HTTP clients: remove non-ASCII chars and quotes
+    ascii_name = re.sub(r"[^\x20-\x7E]", "", filename).replace('"', "").strip()
+    if not ascii_name or ascii_name.startswith("."):
+        ascii_name = "media_download"
+        if "." in filename:
+            ext = filename.rsplit(".", 1)[-1]
+            ascii_name = f"media_download.{ext}"
+
+    # 2. RFC 5987 percent-encoded UTF-8 filename for all modern browsers
+    encoded_name = urllib.parse.quote(filename, encoding="utf-8")
+
+    if encoded_name != filename:
+        return f'{disposition_type}; filename="{ascii_name}"; filename*=UTF-8\'\'{encoded_name}'
+    return f'{disposition_type}; filename="{ascii_name}"'
+

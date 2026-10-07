@@ -212,7 +212,7 @@ class DownloadPipeline:
             elif "+" in fmt:
                 ydl_opts["format"] = fmt
             elif fmt:
-                ydl_opts["format"] = f"{fmt}+{audio_spec}/{fmt}+bestaudio/{fmt}/bestvideo[protocol!*=m3u8]+{audio_spec}/best"
+                ydl_opts["format"] = f"{fmt}[vcodec!=none][acodec!=none]/{fmt}+{audio_spec}/{fmt}+bestaudio/{fmt}/bestvideo[protocol!*=m3u8]+{audio_spec}/best"
             else:
                 ydl_opts["format"] = f"bestvideo[protocol!*=m3u8]+{audio_spec}/bestvideo+{audio_spec}/best"
 

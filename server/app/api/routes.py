@@ -17,6 +17,7 @@ from app.core.security import (
     SSRFBlockedError,
     validate_and_sanitize_url,
     sanitize_filename,
+    make_content_disposition,
 )
 from app.models.schemas import (
     AnalyzeRequest,
@@ -405,7 +406,7 @@ def direct_stream_download(
             h = fmt[:-1]
             cmd += ["-f", f"bestvideo[height<={h}][protocol!*=m3u8]+{audio_spec}/bestvideo[height<={h}]+{audio_spec}/best[height<={h}]/best"]
         else:
-            cmd += ["-f", f"{fmt}+{audio_spec}/{fmt}+bestaudio/{fmt}/bestvideo[protocol!*=m3u8]+{audio_spec}/best"]
+            cmd += ["-f", f"{fmt}[vcodec!=none][acodec!=none]/{fmt}+{audio_spec}/{fmt}+bestaudio/{fmt}/bestvideo[protocol!*=m3u8]+{audio_spec}/best"]
         media_type = "video/mp4"
 
     cmd.append(clean_url)
@@ -431,7 +432,7 @@ def direct_stream_download(
                 pass
 
     headers = {
-        "Content-Disposition": f'attachment; filename="{safe_filename}"',
+        "Content-Disposition": make_content_disposition(safe_filename),
     }
     if token:
         headers["Set-Cookie"] = f"truetube_dl_{token}=1; Path=/; Max-Age=60"

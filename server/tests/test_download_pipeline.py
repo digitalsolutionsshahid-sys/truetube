@@ -249,5 +249,36 @@ def test_direct_stream_download_validations():
     resp_inv = client.get("/api/download/direct?url=ftp://invalid-url.com")
     assert resp_inv.status_code == 400
 
+def test_direct_stream_download_unicode_and_emojis_in_title():
+    """Verify that /api/download/direct handles titles with emojis and non-ASCII characters without 500 error."""
+    from unittest.mock import patch, MagicMock
+
+    mock_proc = MagicMock()
+    mock_proc.stdout.read.side_effect = [b"video_chunk", b""]
+    mock_proc.kill.return_value = None
+    mock_proc.wait.return_value = None
+
+    with patch("subprocess.Popen", return_value=mock_proc):
+        # Title with TikTok-style emojis and non-ASCII characters
+        emoji_title = "Maine Suna Hai Woh Aaye Hain Punjab Se🤌🏻❤️🎶 #fyp"
+        resp = client.get(
+            "/api/download/direct",
+            params={
+                "url": "https://www.tiktok.com/@user/video/123456789",
+                "format_id": "bytevc1_1080p_1469421-0",
+                "container": "mp4",
+                "title": emoji_title,
+            },
+        )
+        assert resp.status_code == 200
+        assert "content-disposition" in resp.headers
+        cd = resp.headers["content-disposition"]
+        # Must be valid latin-1 header
+        cd.encode("latin-1")
+        # Must contain RFC 5987 encoded filename for modern browsers
+        assert "filename*=" in cd
+        assert "attachment" in cd
+
+
 
 

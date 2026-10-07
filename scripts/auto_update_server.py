@@ -9,6 +9,7 @@ import urllib.error
 RAILWAY_GRAPHQL = "https://backboard.railway.com/graphql/v2"
 RAILWAY_TOKEN = os.environ.get("RAILWAY_TOKEN", "fd2ae7b2-0037-4211-a166-d70e7e1c6ce2")
 SERVICE_ID = os.environ.get("RAILWAY_SERVICE_ID", "85f0bed5-dd73-4db1-a23d-c5431b5ec90d")
+ENVIRONMENT_ID = os.environ.get("RAILWAY_ENVIRONMENT_ID", "cf353953-397b-4fa5-8eda-12e14e51d9f1")
 HEALTH_URL = "https://truetube-production.up.railway.app/api/health"
 
 def fetch_latest_pypi_version(package_name: str) -> str | None:
@@ -91,22 +92,16 @@ def get_latest_deployment_id() -> str | None:
             return edges[0].get("node", {}).get("id")
     return None
 
-def trigger_railway_redeploy(deployment_id: str) -> str | None:
+def trigger_railway_redeploy(deployment_id: str | None = None) -> bool:
     query = """
-    mutation Redeploy($id: String!) {
-        deploymentRedeploy(id: $id, usePreviousImageTag: false) {
-            id
-            status
-            createdAt
-        }
+    mutation DeployLatest($serviceId: String!, $environmentId: String!) {
+        serviceInstanceDeploy(serviceId: $serviceId, environmentId: $environmentId, latestCommit: true)
     }
     """
-    res = query_railway_graphql(query, {"id": deployment_id})
+    res = query_railway_graphql(query, {"serviceId": SERVICE_ID, "environmentId": ENVIRONMENT_ID})
     if res and "data" in res:
-        dep = res.get("data", {}).get("deploymentRedeploy")
-        if dep:
-            return dep.get("id")
-    return None
+        return bool(res.get("data", {}).get("serviceInstanceDeploy"))
+    return False
 
 def check_railway_health() -> bool:
     try:

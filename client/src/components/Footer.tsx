@@ -2,6 +2,8 @@ import React from 'react';
 import { Zap, Sparkles, MessageCircle, MapPin, Heart } from 'lucide-react';
 import { useRouter } from '../router/useRouter';
 
+const CURRENT_YEAR = new Date().getFullYear();
+
 export const Footer: React.FC = () => {
   const { navigateTo } = useRouter();
 
@@ -110,7 +112,7 @@ export const Footer: React.FC = () => {
         {/* Legal Disclaimer & Copyright */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500 text-center sm:text-left">
           <p>
-            &copy; {new Date().getFullYear()} TrueTube. All rights reserved. Made with&nbsp;
+            &copy; {CURRENT_YEAR} TrueTube. All rights reserved. Made with&nbsp;
             <Heart className="w-3.5 h-3.5 inline text-rose-500 fill-rose-500 mx-0.5 align-baseline" />
             &nbsp;by TrueLife Academy.
           </p>

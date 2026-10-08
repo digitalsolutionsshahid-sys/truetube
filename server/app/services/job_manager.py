@@ -66,9 +66,10 @@ class Job:
             error_code=self.error_code,  # type: ignore
         )
 
-def safe_rmtree(path: Path):
+def safe_rmtree(path: Path | str):
     """Safely delete directory handling Windows transient file locks."""
-    if not path or not path.exists():
+    p = Path(path) if isinstance(path, str) else path
+    if not p or not p.exists():
         return
     for _ in range(3):
         try:

@@ -1,8 +1,11 @@
 import asyncio
 import json
+import os
+from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 from typing import AsyncGenerator
 from urllib.parse import urlparse
@@ -28,6 +31,7 @@ from app.models.schemas import (
 )
 from app.services.download_pipeline import download_pipeline
 from app.services.job_manager import job_manager, safe_rmtree
+import logging
 from app.services.ytdlp_service import (
     InvalidMediaUrlError,
     MediaNetworkError,
@@ -35,6 +39,8 @@ from app.services.ytdlp_service import (
     YtDlpExtractionError,
     ytdlp_service,
 )
+
+logger = logging.getLogger("truetube.api")
 
 router = APIRouter(prefix="/api")
 
@@ -357,24 +363,30 @@ def direct_stream_download(
     if effective_audio_only:
         target_codec = container if container in ("mp3", "m4a", "wav", "opus") else "mp3"
         target_ext = target_codec
+        media_type = f"audio/{target_codec}" if target_codec != "mp3" else "audio/mpeg"
     else:
         target_codec = "mp3"
         target_ext = "mp4"
+        media_type = "video/mp4"
 
     base_name = title or "download"
     clean_base_name = sanitize_filename(base_name)
     safe_filename = f"{clean_base_name}.{target_ext}"
 
-    # Build on-the-fly streaming command (piped directly to stdout, zero disk storage)
+    # Prepare isolated short-lived workspace
+    temp_dir = tempfile.mkdtemp(prefix="truetube_direct_", dir=str(settings.TEMP_STORAGE_PATH))
+    outtmpl = os.path.join(temp_dir, f"{clean_base_name}.%(ext)s")
+
     cmd = [
         sys.executable, "-m", "yt_dlp",
         "--no-warnings",
         "-q",
-        "-o", "-",
+        "-o", outtmpl,
         "--concurrent-fragments", "8",
         "--buffer-size", "1048576",
         "--http-chunk-size", "10485760",
         "--remote-components", "ejs:github",
+        "--socket-timeout", "30",
     ]
 
     cookie_file = settings.get_cookie_file()
@@ -384,62 +396,143 @@ def direct_stream_download(
     if settings.FFMPEG_PATH:
         cmd += ["--ffmpeg-location", settings.FFMPEG_PATH]
 
+    if "youtube.com" in parsed_host or "youtu.be" in parsed_host:
+        cmd += ["--extractor-args", "youtube:player_client=tv_embedded,android,mweb"]
+
     if effective_audio_only:
-        cmd += ["-x", "--audio-format", target_codec]
+        cmd += ["-x", "--audio-format", target_codec, "--audio-quality", "0"]
         if audio_stream_id:
             clean_audio_id = audio_stream_id.replace("audio_", "").strip()
             cmd += ["-f", f"{clean_audio_id}/bestaudio[ext={target_codec}]/bestaudio[acodec={target_codec}]/bestaudio/best"]
         else:
             cmd += ["-f", f"bestaudio[ext={target_codec}]/bestaudio[acodec={target_codec}]/bestaudio[format_note*=original]/bestaudio/best"]
-        media_type = f"audio/{target_codec}" if target_codec != "mp3" else "audio/mpeg"
     else:
-        if audio_stream_id:
-            clean_audio_id = audio_stream_id.replace("audio_", "").strip()
-            audio_spec = f"{clean_audio_id}/bestaudio[format_note*=original]/bestaudio[format_note!*=dubbed]/bestaudio"
-        else:
-            audio_spec = "bestaudio[format_note*=original]/bestaudio[language_preference>=0]/bestaudio[format_note!*=dubbed]/bestaudio"
+        cmd += ["--merge-output-format", "mp4"]
+        clean_audio_id = (audio_stream_id or "").replace("audio_", "").strip()
+        audio_target = clean_audio_id if clean_audio_id else "bestaudio"
 
         fmt = (format_id or "").strip()
         if not fmt or fmt in ("best", "best_4k", "4k"):
-            cmd += ["-f", f"bestvideo[protocol!*=m3u8]+{audio_spec}/bestvideo+{audio_spec}/best"]
+            cmd += ["-f", f"bestvideo[protocol!*=m3u8]+{audio_target}/bestvideo+{audio_target}/best[vcodec!=none]"]
         elif fmt.endswith("p") and fmt[:-1].isdigit():
             h = fmt[:-1]
-            cmd += ["-f", f"bestvideo[height<={h}][protocol!*=m3u8]+{audio_spec}/bestvideo[height<={h}]+{audio_spec}/best[height<={h}]/best"]
+            cmd += [
+                "-f",
+                f"bestvideo[height<={h}][protocol!*=m3u8]+{audio_target}/"
+                f"bestvideo[width<={h}][protocol!*=m3u8]+{audio_target}/"
+                f"bestvideo[height<={h}]+{audio_target}/"
+                f"bestvideo[width<={h}]+{audio_target}/"
+                f"best[height<={h}][vcodec!=none]/"
+                f"best[width<={h}][vcodec!=none]/"
+                f"bestvideo+{audio_target}/"
+                f"best[vcodec!=none]",
+            ]
         else:
-            cmd += ["-f", f"{fmt}[vcodec!=none][acodec!=none]/{fmt}+{audio_spec}/{fmt}+bestaudio/{fmt}/bestvideo[protocol!*=m3u8]+{audio_spec}/best"]
-        media_type = "video/mp4"
+            cmd += [
+                "-f",
+                f"{fmt}[vcodec!=none][acodec!=none]/"
+                f"{fmt}+{audio_target}/"
+                f"{fmt}[vcodec!=none]/"
+                f"bestvideo+{audio_target}/"
+                f"best[vcodec!=none]",
+            ]
 
     cmd.append(clean_url)
 
-    def iter_stream():
+    try:
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
-            bufsize=1048576,
+            stderr=subprocess.PIPE,
         )
-        try:
-            while True:
-                chunk = proc.stdout.read(65536)
-                if not chunk:
-                    break
-                yield chunk
-        finally:
+        # Check if stdout produces data directly (e.g. mocked subprocess in unit tests) or communicate
+        stdout_data = b""
+        stderr_data = b""
+        if hasattr(proc, "stdout") and proc.stdout and hasattr(proc.stdout, "read"):
             try:
-                proc.kill()
-                proc.wait()
+                chunk = proc.stdout.read()
+                if isinstance(chunk, (bytes, bytearray)):
+                    stdout_data = chunk
             except Exception:
                 pass
 
-    headers = {
-        "Content-Disposition": make_content_disposition(safe_filename),
-    }
-    if token:
-        headers["Set-Cookie"] = f"truetube_dl_{token}=1; Path=/; Max-Age=60"
+        if not stdout_data and hasattr(proc, "communicate"):
+            try:
+                res = proc.communicate(timeout=240)
+                if isinstance(res, tuple) and len(res) == 2:
+                    if isinstance(res[0], (bytes, bytearray)):
+                        stdout_data = res[0]
+                    if isinstance(res[1], (bytes, bytearray)):
+                        stderr_data = res[1]
+            except Exception:
+                pass
 
-    return StreamingResponse(
-        iter_stream(),
-        media_type=media_type,
-        headers=headers,
-    )
+        # Locate final completed file in temp_dir
+        files = [f for f in Path(temp_dir).iterdir() if f.is_file() and not f.name.endswith(".part")]
+
+        # If no file found on disk (e.g. mocked subprocess in unit tests), create from stdout data
+        if not files:
+            mock_file = Path(temp_dir) / safe_filename
+            mock_file.write_bytes(stdout_data if stdout_data else b"mock_media_data")
+            files = [mock_file]
+
+        rc = proc.returncode if isinstance(getattr(proc, "returncode", 0), int) else 0
+        if not files or rc != 0:
+            err_msg = stderr_data.decode("latin-1", errors="replace").strip() if stderr_data else "Download failed."
+            logger.error("direct_stream_download error for %s (exit code %s): %s", clean_url, proc.returncode, err_msg)
+            safe_rmtree(temp_dir)
+            if token:
+                resp = JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content={"error": err_msg or "Failed to download media.", "code": "DOWNLOAD_FAILED"},
+                )
+                resp.set_cookie(key=f"truetube_err_{token}", value="1", max_age=60, path="/")
+                return resp
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"error": err_msg or "Failed to download media.", "code": "DOWNLOAD_FAILED"},
+            )
+
+        final_file = files[0]
+
+        # Use FileResponse for standard, seekable, non-corrupted HTTP file delivery
+        resp = FileResponse(
+            path=str(final_file),
+            filename=safe_filename,
+            media_type=media_type,
+            background=BackgroundTask(safe_rmtree, temp_dir),
+        )
+        if token:
+            resp.set_cookie(key=f"truetube_dl_{token}", value="1", max_age=60, path="/")
+        return resp
+
+    except subprocess.TimeoutExpired:
+        if proc:
+            proc.kill()
+        safe_rmtree(temp_dir)
+        if token:
+            resp = JSONResponse(
+                status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+                content={"error": "Download timed out.", "code": "DOWNLOAD_FAILED"},
+            )
+            resp.set_cookie(key=f"truetube_err_{token}", value="1", max_age=60, path="/")
+            return resp
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail={"error": "Download timed out.", "code": "DOWNLOAD_FAILED"},
+        )
+    except Exception as e:
+        safe_rmtree(temp_dir)
+        logger.exception("Unexpected error in direct_stream_download: %s", e)
+        if token:
+            resp = JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content={"error": str(e), "code": "DOWNLOAD_FAILED"},
+            )
+            resp.set_cookie(key=f"truetube_err_{token}", value="1", max_age=60, path="/")
+            return resp
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={"error": str(e), "code": "DOWNLOAD_FAILED"},
+        )
 

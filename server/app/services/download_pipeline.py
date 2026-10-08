@@ -193,28 +193,48 @@ class DownloadPipeline:
             target_container = "mp4"
             ydl_opts["merge_output_format"] = target_container
 
-            audio_spec = (
-                f"{clean_audio_id}/bestaudio[format_note*=original]/bestaudio[format_note!*=dubbed]/bestaudio"
-                if clean_audio_id
-                else "bestaudio[format_note*=original]/bestaudio[language_preference>=0]/bestaudio[format_note!*=dubbed]/bestaudio"
-            )
+            audio_target = clean_audio_id if clean_audio_id else "bestaudio"
             fmt = (req.format_id or "").strip()
             res = (req.resolution or "").lower().replace("p", "").strip()
 
             if fmt in ("best", "best_4k", "4k") or (not fmt and not res):
-                ydl_opts["format"] = f"bestvideo[protocol!*=m3u8]+{audio_spec}/bestvideo+{audio_spec}/best"
+                ydl_opts["format"] = f"bestvideo[protocol!*=m3u8]+{audio_target}/bestvideo+{audio_target}/best[vcodec!=none]"
             elif fmt.endswith("p") and fmt[:-1].isdigit():
                 h = int(fmt[:-1])
-                ydl_opts["format"] = f"bestvideo[height<={h}][protocol!*=m3u8]+{audio_spec}/best[height<={h}]/bestvideo+bestaudio/best"
+                ydl_opts["format"] = (
+                    f"bestvideo[height<={h}][protocol!*=m3u8]+{audio_target}/"
+                    f"bestvideo[width<={h}][protocol!*=m3u8]+{audio_target}/"
+                    f"bestvideo[height<={h}]+{audio_target}/"
+                    f"bestvideo[width<={h}]+{audio_target}/"
+                    f"best[height<={h}][vcodec!=none]/"
+                    f"best[width<={h}][vcodec!=none]/"
+                    f"bestvideo+{audio_target}/"
+                    f"best[vcodec!=none]"
+                )
             elif res.isdigit():
                 h = int(res)
-                ydl_opts["format"] = f"bestvideo[height<={h}][protocol!*=m3u8]+{audio_spec}/best[height<={h}]/bestvideo+bestaudio/best"
+                ydl_opts["format"] = (
+                    f"bestvideo[height<={h}][protocol!*=m3u8]+{audio_target}/"
+                    f"bestvideo[width<={h}][protocol!*=m3u8]+{audio_target}/"
+                    f"bestvideo[height<={h}]+{audio_target}/"
+                    f"bestvideo[width<={h}]+{audio_target}/"
+                    f"best[height<={h}][vcodec!=none]/"
+                    f"best[width<={h}][vcodec!=none]/"
+                    f"bestvideo+{audio_target}/"
+                    f"best[vcodec!=none]"
+                )
             elif "+" in fmt:
                 ydl_opts["format"] = fmt
             elif fmt:
-                ydl_opts["format"] = f"{fmt}[vcodec!=none][acodec!=none]/{fmt}+{audio_spec}/{fmt}+bestaudio/{fmt}/bestvideo[protocol!*=m3u8]+{audio_spec}/best"
+                ydl_opts["format"] = (
+                    f"{fmt}[vcodec!=none][acodec!=none]/"
+                    f"{fmt}+{audio_target}/"
+                    f"{fmt}[vcodec!=none]/"
+                    f"bestvideo+{audio_target}/"
+                    f"best[vcodec!=none]"
+                )
             else:
-                ydl_opts["format"] = f"bestvideo[protocol!*=m3u8]+{audio_spec}/bestvideo+{audio_spec}/best"
+                ydl_opts["format"] = f"bestvideo[protocol!*=m3u8]+{audio_target}/bestvideo+{audio_target}/best[vcodec!=none]"
 
         # Embed metadata if requested
         if req.embed_metadata:

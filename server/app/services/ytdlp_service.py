@@ -216,8 +216,22 @@ class YtDlpService:
                 # Estimate size from duration and bitrate (kbit/s -> bytes)
                 filesize = int((tbr * 1024 / 8) * duration)
 
-            has_video = vcodec != "none"
-            has_audio = acodec != "none"
+            # Detect progressive candidate formats where yt-dlp does not populate vcodec/acodec metadata
+            # e.g., Instagram progressive formats 1, 2, 3 have video_ext='mp4', ext='mp4', vcodec=None
+            has_explicit_video = vcodec != "none" and vcodec is not None
+            is_progressive_candidate = (
+                ext in ("mp4", "m4v", "webm")
+                and (fmt.get("video_ext") not in (None, "none") or fmt_id in ("1", "2", "3"))
+                and fmt.get("audio_ext") != "mp4"
+            )
+            has_video = has_explicit_video or is_progressive_candidate
+            has_audio = (acodec != "none" and acodec is not None) or is_progressive_candidate
+
+            if is_progressive_candidate and not has_explicit_video:
+                if height == 0:
+                    height = 720
+                if vcodec == "none":
+                    vcodec = "avc1"
 
             if has_video:
                 available_video_containers.add(ext.upper())

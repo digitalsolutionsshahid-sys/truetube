@@ -159,6 +159,10 @@ class YtDlpService:
                 raise InvalidMediaUrlError("The media item was not found or is unavailable.")
             elif "connection" in err_msg or "network" in err_msg or "timed out" in err_msg:
                 raise MediaNetworkError("Connection timed out or network error reaching media provider.")
+            elif "empty media response" in err_msg:
+                raise UnsupportedMediaSourceError("Instagram restricted public access to this post without login. Please verify the post is public or copy a share link from the app.")
+            elif "blocked from accessing this post" in err_msg or "ip address is blocked" in err_msg:
+                raise UnsupportedMediaSourceError("This platform has temporarily rate-limited cloud requests for this post. Please try again shortly or use another link.")
             else:
                 raise YtDlpExtractionError(f"Could not extract media info: {e}")
         except (UnsupportedMediaSourceError, InvalidMediaUrlError, MediaNetworkError, YtDlpExtractionError):

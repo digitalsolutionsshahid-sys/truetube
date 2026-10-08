@@ -37,19 +37,25 @@ class Settings(BaseModel):
         if o.strip()
     ]
 
-    # YouTube Anti-Bot & Cookies
+    # Anti-Bot & Cookies (YouTube, Instagram, etc.)
     YOUTUBE_COOKIES_PATH: str = os.getenv("YOUTUBE_COOKIES_PATH", "")
     YOUTUBE_COOKIES: str = os.getenv("YOUTUBE_COOKIES", "")
+    COOKIES_PATH: str = os.getenv("COOKIES_PATH", "")
+    COOKIES: str = os.getenv("COOKIES", "")
+    INSTAGRAM_COOKIES: str = os.getenv("INSTAGRAM_COOKIES", "")
 
     def get_cookie_file(self) -> str | None:
-        """Returns the path to a valid cookies file, or writes raw YOUTUBE_COOKIES content to disk."""
-        if self.YOUTUBE_COOKIES_PATH and os.path.isfile(self.YOUTUBE_COOKIES_PATH):
-            return self.YOUTUBE_COOKIES_PATH
-        if self.YOUTUBE_COOKIES:
-            target = self.STORAGE_PATH / "youtube_cookies.txt"
+        """Returns the path to a valid cookies file, or writes raw COOKIES / YOUTUBE_COOKIES content to disk."""
+        path_candidate = self.COOKIES_PATH or self.YOUTUBE_COOKIES_PATH
+        if path_candidate and os.path.isfile(path_candidate):
+            return path_candidate
+
+        raw_cookies = self.COOKIES or self.YOUTUBE_COOKIES or self.INSTAGRAM_COOKIES
+        if raw_cookies:
+            target = self.STORAGE_PATH / "cookies.txt"
             try:
-                if not target.exists() or target.read_text(encoding="utf-8") != self.YOUTUBE_COOKIES:
-                    target.write_text(self.YOUTUBE_COOKIES, encoding="utf-8")
+                if not target.exists() or target.read_text(encoding="utf-8") != raw_cookies:
+                    target.write_text(raw_cookies, encoding="utf-8")
                 return str(target)
             except Exception:
                 pass

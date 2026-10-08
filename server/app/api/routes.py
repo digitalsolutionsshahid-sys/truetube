@@ -481,6 +481,13 @@ def direct_stream_download(
             err_msg = stderr_data.decode("latin-1", errors="replace").strip() if stderr_data else "Download failed."
             logger.error("direct_stream_download error for %s (exit code %s): %s", clean_url, proc.returncode, err_msg)
             safe_rmtree(temp_dir)
+            err_lower = err_msg.lower()
+            if "requested format is not available" in err_lower:
+                err_msg = "Requested quality is not available for this video."
+            elif "empty media response" in err_lower:
+                err_msg = "Instagram restricted public access to this post without login. Please verify the post is public or copy a share link from the app."
+            elif "blocked from accessing this post" in err_lower or "ip address is blocked" in err_lower:
+                err_msg = "This platform has temporarily rate-limited cloud requests for this post. Please try again shortly or use another link."
             if token:
                 resp = JSONResponse(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -506,6 +513,8 @@ def direct_stream_download(
             resp.set_cookie(key=f"truetube_dl_{token}", value="1", max_age=60, path="/")
         return resp
 
+    except HTTPException:
+        raise
     except subprocess.TimeoutExpired:
         if proc:
             proc.kill()

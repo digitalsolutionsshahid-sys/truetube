@@ -86,8 +86,8 @@ def get_latest_deployment_id() -> str | None:
     }
     """
     res = query_railway_graphql(query, {"serviceId": SERVICE_ID})
-    if res and "data" in res:
-        edges = res.get("data", {}).get("deployments", {}).get("edges", [])
+    if res and res.get("data"):
+        edges = res["data"].get("deployments", {}).get("edges", [])
         if edges:
             return edges[0].get("node", {}).get("id")
     return None
@@ -99,8 +99,8 @@ def trigger_railway_redeploy(deployment_id: str | None = None) -> bool:
     }
     """
     res = query_railway_graphql(query, {"serviceId": SERVICE_ID, "environmentId": ENVIRONMENT_ID})
-    if res and "data" in res:
-        return bool(res.get("data", {}).get("serviceInstanceDeploy"))
+    if res and res.get("data"):
+        return bool(res["data"].get("serviceInstanceDeploy"))
     return False
 
 def check_railway_health() -> bool:

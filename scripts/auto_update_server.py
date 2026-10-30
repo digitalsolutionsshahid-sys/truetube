@@ -6,8 +6,8 @@ import time
 import urllib.request
 import urllib.error
 
-RAILWAY_GRAPHQL = "https://backboard.railway.com/graphql/v2"
-RAILWAY_TOKEN = os.environ.get("RAILWAY_TOKEN", "fd2ae7b2-0037-4211-a166-d70e7e1c6ce2")
+RAILWAY_GRAPHQL = "https://backboard.railway.app/graphql/v2"
+RAILWAY_TOKEN = os.environ.get("RAILWAY_TOKEN", "a6d5b69c-36a3-4f7e-be07-d8a5441daed6")
 SERVICE_ID = os.environ.get("RAILWAY_SERVICE_ID", "85f0bed5-dd73-4db1-a23d-c5431b5ec90d")
 ENVIRONMENT_ID = os.environ.get("RAILWAY_ENVIRONMENT_ID", "cf353953-397b-4fa5-8eda-12e14e51d9f1")
 HEALTH_URL = "https://truetube-production.up.railway.app/api/health"

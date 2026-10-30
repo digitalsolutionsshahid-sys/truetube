@@ -3,7 +3,7 @@ import json
 import sys
 
 TOKEN = 'a6d5b69c-36a3-4f7e-be07-d8a5441daed6'
-DEPLOYMENT_ID = 'f80159da-ee63-4101-b0f0-87161bff8069'
+DEPLOYMENT_ID = 'fd812ff6-152c-40c5-bd69-01e9084e7043'
 
 query = """
 query GetLogs($deploymentId: String!) {
@@ -25,8 +25,8 @@ try:
     with urllib.request.urlopen(req) as resp:
         res = json.loads(resp.read().decode())
         logs = res.get('data', {}).get('deploymentLogs', [])
-        for log in logs[-30:]:
-            print(f"[{log.get('severity')}] {log.get('message')}")
+        for log in logs:
+            print(f"[{log.get('severity')}] {repr(log.get('message'))}")
         if not logs:
             print("No logs or empty response:", res)
 except urllib.error.HTTPError as e:

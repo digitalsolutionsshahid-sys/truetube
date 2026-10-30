@@ -400,7 +400,7 @@ def direct_stream_download(
         cmd += ["--ffmpeg-location", settings.FFMPEG_PATH]
 
     if "youtube.com" in parsed_host or "youtu.be" in parsed_host:
-        cmd += ["--extractor-args", "youtube:player_client=visionos,android_vr"]
+        cmd += ["--extractor-args", "youtube:player_client=visionos"]
 
     if effective_audio_only:
         cmd += ["-x", "--audio-format", target_codec, "--audio-quality", "0"]

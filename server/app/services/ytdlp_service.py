@@ -110,14 +110,14 @@ class YtDlpService:
             parsed_host = (urlparse(url).hostname or "").lower()
             is_youtube = "youtube.com" in parsed_host or "youtu.be" in parsed_host
 
-            # For YouTube: use visionos + android_vr player clients to bypass
+            # For YouTube: use visionos player client exclusively to bypass
             # bot-detection and ensure formats are available without SABR URL omission.
-            # Avoid 'web' client as it triggers bot challenges on datacenter IP addresses.
+            # Avoid 'web' and 'android_vr' clients as they trigger bot/login challenges on datacenter IP addresses.
             primary_opts = dict(ydl_opts)
             if is_youtube:
                 primary_opts["extractor_args"] = {
                     "youtube": {
-                        "player_client": ["visionos", "android_vr"],
+                        "player_client": ["visionos"],
                     }
                 }
 

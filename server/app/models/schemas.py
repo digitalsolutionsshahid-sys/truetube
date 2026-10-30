@@ -19,6 +19,16 @@ class FormatItem(BaseModel):
     has_audio: bool = False
     filesize: Optional[int] = None
 
+    @field_validator("filesize", mode="before")
+    @classmethod
+    def coerce_filesize(cls, v):
+        if v is None:
+            return None
+        try:
+            return int(round(float(v)))
+        except (ValueError, TypeError):
+            return None
+
 class AudioStreamItem(BaseModel):
     id: str
     format_id: str
@@ -28,6 +38,16 @@ class AudioStreamItem(BaseModel):
     filesize: Optional[int] = None
     language: Optional[str] = None
     label: Optional[str] = None
+
+    @field_validator("filesize", mode="before")
+    @classmethod
+    def coerce_filesize(cls, v):
+        if v is None:
+            return None
+        try:
+            return int(round(float(v)))
+        except (ValueError, TypeError):
+            return None
 
 class MediaInfoResponse(BaseModel):
     url: str

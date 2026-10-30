@@ -90,6 +90,7 @@ class YtDlpService:
             "socket_timeout": 20,
             "noprogress": True,
             "remote_components": ["ejs:github"],
+            "js_runtimes": {"deno": {}, "node": {}},
         }
         if cookie_file:
             opts["cookiefile"] = cookie_file
@@ -110,14 +111,13 @@ class YtDlpService:
             parsed_host = (urlparse(url).hostname or "").lower()
             is_youtube = "youtube.com" in parsed_host or "youtu.be" in parsed_host
 
-            # For YouTube: use visionos player client exclusively to bypass
-            # bot-detection and ensure formats are available without SABR URL omission.
-            # Avoid 'web' and 'android_vr' clients as they trigger bot/login challenges on datacenter IP addresses.
+            # For YouTube: query android and visionos player clients to maximize format
+            # coverage while maintaining fallback resilience on datacenter IP addresses.
             primary_opts = dict(ydl_opts)
             if is_youtube:
                 primary_opts["extractor_args"] = {
                     "youtube": {
-                        "player_client": ["visionos"],
+                        "player_client": ["android", "visionos"],
                     }
                 }
 
@@ -127,12 +127,12 @@ class YtDlpService:
             except (yt_dlp.utils.DownloadError, yt_dlp.utils.ExtractorError) as e:
                 err_lower = str(e).lower()
                 if "bot" in err_lower or "sign in" in err_lower or "confirm" in err_lower or "reload" in err_lower or "precondition" in err_lower:
-                    logger.warning("YouTube challenge/reload detected on %s, retrying with visionos fallback without cookies...", url)
+                    logger.warning("YouTube challenge/reload detected on %s, retrying with android fallback...", url)
                     fallback_opts = dict(ydl_opts)
                     fallback_opts.pop("cookiefile", None)
                     fallback_opts["extractor_args"] = {
                         "youtube": {
-                            "player_client": ["visionos"],
+                            "player_client": ["android"],
                         }
                     }
                     try:
@@ -156,7 +156,7 @@ class YtDlpService:
             if "geo restriction" in err_msg or "not available from your location" in err_msg:
                 raise UnsupportedMediaSourceError("This track is not available in this region due to SoundCloud/creator geo-restrictions.", code="DOWNLOAD_FAILED")
             elif "private" in err_msg or "sign in" in err_msg or "restricted" in err_msg or "bot" in err_msg or "confirm you" in err_msg:
-                raise UnsupportedMediaSourceError("This media item is private, restricted, or requires authentication.", code="DOWNLOAD_FAILED")
+                raise UnsupportedMediaSourceError("YouTube is requiring account verification or bot check for this video. Please try another video or supply fresh YouTube cookies.", code="DOWNLOAD_FAILED")
             elif "not found" in err_msg or "404" in err_msg or "incomplete" in err_msg:
                 raise InvalidMediaUrlError("The media item was not found or is unavailable.")
             elif "connection" in err_msg or "network" in err_msg or "timed out" in err_msg:

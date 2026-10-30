@@ -3,7 +3,7 @@ import json
 import sys
 
 TOKEN = 'a6d5b69c-36a3-4f7e-be07-d8a5441daed6'
-DEPLOYMENT_ID = '0f6940fd-20c8-4fde-b8d8-9c7eb653f1a6'
+DEPLOYMENT_ID = 'f80159da-ee63-4101-b0f0-87161bff8069'
 
 query = """
 query GetLogs($deploymentId: String!) {

@@ -136,7 +136,8 @@ def analyze_media(req: AnalyzeRequest):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"error": str(e), "code": e.code},
         )
-    except Exception:
+    except Exception as e:
+        logger.exception("Unexpected error in analyze_media: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={

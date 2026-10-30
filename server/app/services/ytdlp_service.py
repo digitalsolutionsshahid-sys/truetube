@@ -90,7 +90,6 @@ class YtDlpService:
             "socket_timeout": 20,
             "noprogress": True,
             "remote_components": ["ejs:github"],
-            "js_runtimes": {"deno": {}, "node": {}},
         }
         if cookie_file:
             opts["cookiefile"] = cookie_file
@@ -125,7 +124,7 @@ class YtDlpService:
             try:
                 with yt_dlp.YoutubeDL(primary_opts) as ydl:
                     return ydl.extract_info(url, download=False)
-            except yt_dlp.utils.DownloadError as e:
+            except (yt_dlp.utils.DownloadError, yt_dlp.utils.ExtractorError) as e:
                 err_lower = str(e).lower()
                 if "bot" in err_lower or "sign in" in err_lower or "confirm" in err_lower or "reload" in err_lower or "precondition" in err_lower:
                     logger.warning("YouTube challenge/reload detected on %s, retrying with visionos fallback without cookies...", url)
@@ -133,11 +132,14 @@ class YtDlpService:
                     fallback_opts.pop("cookiefile", None)
                     fallback_opts["extractor_args"] = {
                         "youtube": {
-                            "player_client": ["android_vr", "visionos"],
+                            "player_client": ["visionos"],
                         }
                     }
-                    with yt_dlp.YoutubeDL(fallback_opts) as fallback_ydl:
-                        return fallback_ydl.extract_info(url, download=False)
+                    try:
+                        with yt_dlp.YoutubeDL(fallback_opts) as fallback_ydl:
+                            return fallback_ydl.extract_info(url, download=False)
+                    except Exception as fallback_err:
+                        logger.warning("Fallback extraction failed on %s: %s", url, fallback_err)
                 raise
 
         try:
@@ -147,15 +149,13 @@ class YtDlpService:
                     info = future.result(timeout=timeout)
                 except (TimeoutError, concurrent.futures.TimeoutError):
                     raise MediaNetworkError(f"Media analysis timed out after {timeout} seconds.")
-        except (yt_dlp.utils.UnsupportedError, yt_dlp.utils.ExtractorError) as e:
-            raise UnsupportedMediaSourceError(f"TrueTube does not currently support this URL: {e}", code="UNSUPPORTED_SOURCE")
         except yt_dlp.utils.GeoRestrictedError as e:
             raise UnsupportedMediaSourceError(f"This item is geo-restricted in this server region: {e}", code="DOWNLOAD_FAILED")
-        except yt_dlp.utils.DownloadError as e:
+        except (yt_dlp.utils.UnsupportedError, yt_dlp.utils.ExtractorError, yt_dlp.utils.DownloadError) as e:
             err_msg = str(e).lower()
             if "geo restriction" in err_msg or "not available from your location" in err_msg:
                 raise UnsupportedMediaSourceError("This track is not available in this region due to SoundCloud/creator geo-restrictions.", code="DOWNLOAD_FAILED")
-            elif "private" in err_msg or "sign in" in err_msg or "restricted" in err_msg:
+            elif "private" in err_msg or "sign in" in err_msg or "restricted" in err_msg or "bot" in err_msg or "confirm you" in err_msg:
                 raise UnsupportedMediaSourceError("This media item is private, restricted, or requires authentication.", code="DOWNLOAD_FAILED")
             elif "not found" in err_msg or "404" in err_msg or "incomplete" in err_msg:
                 raise InvalidMediaUrlError("The media item was not found or is unavailable.")
@@ -165,6 +165,8 @@ class YtDlpService:
                 raise UnsupportedMediaSourceError("Instagram restricted public access to this post without login. Please verify the post is public or copy a share link from the app.", code="DOWNLOAD_FAILED")
             elif "blocked from accessing this post" in err_msg or "ip address is blocked" in err_msg:
                 raise UnsupportedMediaSourceError("This platform has temporarily rate-limited cloud requests for this post. Please try again shortly or use another link.", code="DOWNLOAD_FAILED")
+            elif isinstance(e, yt_dlp.utils.UnsupportedError) or "unsupported url" in err_msg:
+                raise UnsupportedMediaSourceError(f"TrueTube does not currently support this URL: {e}", code="UNSUPPORTED_SOURCE")
             else:
                 raise YtDlpExtractionError(f"Could not extract media info: {e}")
         except (UnsupportedMediaSourceError, InvalidMediaUrlError, MediaNetworkError, YtDlpExtractionError):

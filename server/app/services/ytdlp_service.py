@@ -98,6 +98,13 @@ class YtDlpService:
         ffmpeg_bin = self.ffmpeg_path or settings.FFMPEG_PATH or shutil.which("ffmpeg")
         if ffmpeg_bin:
             opts["ffmpeg_location"] = ffmpeg_bin
+
+        try:
+            from yt_dlp.networking.impersonate import ImpersonateTarget
+            opts["impersonate"] = ImpersonateTarget.from_str("chrome")
+        except Exception:
+            pass
+
         return opts
 
     def extract_info(self, url: str, timeout: int = 30) -> MediaInfoResponse:
@@ -155,16 +162,16 @@ class YtDlpService:
             err_msg = str(e).lower()
             if "geo restriction" in err_msg or "not available from your location" in err_msg:
                 raise UnsupportedMediaSourceError("This track is not available in this region due to SoundCloud/creator geo-restrictions.", code="DOWNLOAD_FAILED")
+            elif "429" in err_msg or "too many requests" in err_msg or "blocked from accessing this post" in err_msg or "ip address is blocked" in err_msg:
+                raise UnsupportedMediaSourceError("Instagram/media platform has temporarily rate-limited server requests. Please try again in a few moments or provide cookies.", code="DOWNLOAD_FAILED")
             elif "private" in err_msg or "sign in" in err_msg or "restricted" in err_msg or "bot" in err_msg or "confirm you" in err_msg:
-                raise UnsupportedMediaSourceError("YouTube is requiring account verification or bot check for this video. Please try another video or supply fresh YouTube cookies.", code="DOWNLOAD_FAILED")
+                raise UnsupportedMediaSourceError("The media platform is requiring account verification or login for this link. Please try another link or supply cookies.", code="DOWNLOAD_FAILED")
             elif "not found" in err_msg or "404" in err_msg or "incomplete" in err_msg:
                 raise InvalidMediaUrlError("The media item was not found or is unavailable.")
             elif "connection" in err_msg or "network" in err_msg or "timed out" in err_msg:
                 raise MediaNetworkError("Connection timed out or network error reaching media provider.")
             elif "empty media response" in err_msg:
                 raise UnsupportedMediaSourceError("Instagram restricted public access to this post without login. Please verify the post is public or copy a share link from the app.", code="DOWNLOAD_FAILED")
-            elif "blocked from accessing this post" in err_msg or "ip address is blocked" in err_msg:
-                raise UnsupportedMediaSourceError("This platform has temporarily rate-limited cloud requests for this post. Please try again shortly or use another link.", code="DOWNLOAD_FAILED")
             elif isinstance(e, yt_dlp.utils.UnsupportedError) or "unsupported url" in err_msg:
                 raise UnsupportedMediaSourceError(f"TrueTube does not currently support this URL: {e}", code="UNSUPPORTED_SOURCE")
             else:

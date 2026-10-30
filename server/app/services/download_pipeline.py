@@ -154,6 +154,11 @@ class DownloadPipeline:
 
         ydl_opts["remote_components"] = ["ejs:github"]
         ydl_opts["js_runtimes"] = {"deno": {}, "node": {}}
+        try:
+            from yt_dlp.networking.impersonate import ImpersonateTarget
+            ydl_opts["impersonate"] = ImpersonateTarget.from_str("chrome")
+        except Exception:
+            pass
         cookie_file = settings.get_cookie_file()
         if cookie_file:
             ydl_opts["cookiefile"] = cookie_file

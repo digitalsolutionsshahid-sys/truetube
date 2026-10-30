@@ -401,6 +401,8 @@ def direct_stream_download(
 
     if "youtube.com" in parsed_host or "youtu.be" in parsed_host:
         cmd += ["--extractor-args", "youtube:player_client=android,visionos"]
+    elif "instagram.com" in parsed_host:
+        cmd += ["--impersonate", "chrome"]
 
     if effective_audio_only:
         cmd += ["-x", "--audio-format", target_codec, "--audio-quality", "0"]
@@ -489,7 +491,7 @@ def direct_stream_download(
                 err_msg = "Requested quality is not available for this video."
             elif "empty media response" in err_lower:
                 err_msg = "Instagram restricted public access to this post without login. Please verify the post is public or copy a share link from the app."
-            elif "blocked from accessing this post" in err_lower or "ip address is blocked" in err_lower:
+            elif "blocked from accessing this post" in err_lower or "ip address is blocked" in err_lower or "429" in err_lower or "too many requests" in err_lower:
                 err_msg = "This platform has temporarily rate-limited cloud requests for this post. Please try again shortly or use another link."
             if token:
                 resp = JSONResponse(

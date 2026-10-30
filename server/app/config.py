@@ -50,7 +50,15 @@ class Settings(BaseModel):
         if path_candidate and os.path.isfile(path_candidate):
             return path_candidate
 
-        raw_cookies = self.COOKIES or self.YOUTUBE_COOKIES or self.INSTAGRAM_COOKIES
+        cookie_parts = []
+        if self.COOKIES:
+            cookie_parts.append(self.COOKIES.strip())
+        if self.YOUTUBE_COOKIES:
+            cookie_parts.append(self.YOUTUBE_COOKIES.strip())
+        if self.INSTAGRAM_COOKIES:
+            cookie_parts.append(self.INSTAGRAM_COOKIES.strip())
+
+        raw_cookies = "\n\n".join(cookie_parts)
         if raw_cookies:
             target = self.STORAGE_PATH / "cookies.txt"
             try:

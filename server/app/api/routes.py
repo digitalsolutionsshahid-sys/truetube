@@ -386,6 +386,8 @@ def direct_stream_download(
         "--buffer-size", "1048576",
         "--http-chunk-size", "10485760",
         "--remote-components", "ejs:github",
+        "--js-runtimes", "deno",
+        "--js-runtimes", "node",
         "--socket-timeout", "30",
     ]
 

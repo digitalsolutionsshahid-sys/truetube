@@ -90,6 +90,7 @@ class YtDlpService:
             "socket_timeout": 20,
             "noprogress": True,
             "remote_components": ["ejs:github"],
+            "js_runtimes": {"deno": {}, "node": {}},
         }
         if cookie_file:
             opts["cookiefile"] = cookie_file

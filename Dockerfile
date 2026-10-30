@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     nodejs \
+    && chmod +x /usr/local/bin/deno || true \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

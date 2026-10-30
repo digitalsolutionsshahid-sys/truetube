@@ -110,13 +110,14 @@ class YtDlpService:
             parsed_host = (urlparse(url).hostname or "").lower()
             is_youtube = "youtube.com" in parsed_host or "youtu.be" in parsed_host
 
-            # For YouTube: use visionos + android_vr + web player clients to bypass
+            # For YouTube: use visionos + android_vr player clients to bypass
             # bot-detection and ensure formats are available without SABR URL omission.
+            # Avoid 'web' client as it triggers bot challenges on datacenter IP addresses.
             primary_opts = dict(ydl_opts)
             if is_youtube:
                 primary_opts["extractor_args"] = {
                     "youtube": {
-                        "player_client": ["visionos", "android_vr", "web"],
+                        "player_client": ["visionos", "android_vr"],
                     }
                 }
 
@@ -126,11 +127,12 @@ class YtDlpService:
             except yt_dlp.utils.DownloadError as e:
                 err_lower = str(e).lower()
                 if "bot" in err_lower or "sign in" in err_lower or "confirm" in err_lower or "reload" in err_lower or "precondition" in err_lower:
-                    logger.warning("YouTube challenge/reload detected on %s, retrying with visionos fallback...", url)
+                    logger.warning("YouTube challenge/reload detected on %s, retrying with visionos fallback without cookies...", url)
                     fallback_opts = dict(ydl_opts)
+                    fallback_opts.pop("cookiefile", None)
                     fallback_opts["extractor_args"] = {
                         "youtube": {
-                            "player_client": ["visionos", "android_vr"],
+                            "player_client": ["android_vr", "visionos"],
                         }
                     }
                     with yt_dlp.YoutubeDL(fallback_opts) as fallback_ydl:

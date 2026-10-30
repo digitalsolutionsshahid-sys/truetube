@@ -160,13 +160,13 @@ class DownloadPipeline:
         # Parse host once — used for both YouTube detection and audio-domain detection
         parsed_host = (urlparse(job.url).hostname or "").lower()
 
-        # For YouTube URLs: use visionos + android_vr + web player clients to bypass
+        # For YouTube URLs: use visionos + android_vr player clients to bypass
         # bot-detection and ensure formats are available without SABR URL omission.
         is_youtube = "youtube.com" in parsed_host or "youtu.be" in parsed_host
         if is_youtube:
             ydl_opts["extractor_args"] = {
                 "youtube": {
-                    "player_client": ["visionos", "android_vr", "web"],
+                    "player_client": ["visionos", "android_vr"],
                 }
             }
 

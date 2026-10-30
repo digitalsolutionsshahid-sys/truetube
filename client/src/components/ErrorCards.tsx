@@ -7,9 +7,10 @@ interface ErrorCardProps {
   type: ErrorType;
   message?: string;
   onAction?: () => void;
+  onReset?: () => void;
 }
 
-export const ErrorCard: React.FC<ErrorCardProps> = ({ type, message, onAction }) => {
+export const ErrorCard: React.FC<ErrorCardProps> = ({ type, message, onAction, onReset }) => {
   const configs = {
     INVALID_URL: {
       icon: AlertCircle,
@@ -66,16 +67,27 @@ export const ErrorCard: React.FC<ErrorCardProps> = ({ type, message, onAction })
       </p>
 
       {/* Action CTA */}
-      {onAction && (
-        <button
-          type="button"
-          onClick={onAction}
-          className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs sm:text-sm font-medium transition-all active:scale-95 border border-slate-700"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          <span>{cur.actionText}</span>
-        </button>
-      )}
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {onAction && (
+          <button
+            type="button"
+            onClick={onAction}
+            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-medium transition-all active:scale-95 shadow-md shadow-indigo-500/20"
+          >
+            <RefreshCw className="w-3.5 h-3.5" />
+            <span>{cur.actionText}</span>
+          </button>
+        )}
+        {onReset && (
+          <button
+            type="button"
+            onClick={onReset}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs sm:text-sm font-medium transition-all active:scale-95 border border-slate-700"
+          >
+            <span>Back to Home</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 };

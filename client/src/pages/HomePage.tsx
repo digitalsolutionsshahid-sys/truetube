@@ -568,8 +568,14 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
             type={errorType}
             message={errorMessage}
             onAction={() => {
+              if (errorType === 'UNSUPPORTED_SOURCE') {
+                setAppState('IDLE');
+              } else {
+                handleAnalyze();
+              }
+            }}
+            onReset={() => {
               setAppState('IDLE');
-              handleAnalyze();
             }}
           />
         </div>

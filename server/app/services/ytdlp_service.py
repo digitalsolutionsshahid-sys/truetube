@@ -21,8 +21,8 @@ class YtDlpExtractionError(Exception):
         self.code = code
 
 class UnsupportedMediaSourceError(YtDlpExtractionError):
-    def __init__(self, message: str = "This media source is unsupported or requires authentication."):
-        super().__init__(message, code="UNSUPPORTED_SOURCE")
+    def __init__(self, message: str = "This media source is unsupported or requires authentication.", code: str = "UNSUPPORTED_SOURCE"):
+        super().__init__(message, code=code)
 
 class InvalidMediaUrlError(YtDlpExtractionError):
     def __init__(self, message: str = "The provided URL is invalid or could not be found."):
@@ -110,14 +110,13 @@ class YtDlpService:
             parsed_host = (urlparse(url).hostname or "").lower()
             is_youtube = "youtube.com" in parsed_host or "youtu.be" in parsed_host
 
-            # For YouTube: use tv_embedded + android + mweb player clients to bypass
-            # JS runtime requirement and avoid bot-detection / sign-in challenges.
-            # These native API clients don't require JS signature decryption.
+            # For YouTube: use visionos + android_vr + web player clients to bypass
+            # bot-detection and ensure formats are available without SABR URL omission.
             primary_opts = dict(ydl_opts)
             if is_youtube:
                 primary_opts["extractor_args"] = {
                     "youtube": {
-                        "player_client": ["tv_embedded", "android", "mweb"],
+                        "player_client": ["visionos", "android_vr", "web"],
                     }
                 }
 
@@ -127,11 +126,11 @@ class YtDlpService:
             except yt_dlp.utils.DownloadError as e:
                 err_lower = str(e).lower()
                 if "bot" in err_lower or "sign in" in err_lower or "confirm" in err_lower or "reload" in err_lower or "precondition" in err_lower:
-                    logger.warning("YouTube challenge/reload detected on %s, retrying with ios client...", url)
+                    logger.warning("YouTube challenge/reload detected on %s, retrying with visionos fallback...", url)
                     fallback_opts = dict(ydl_opts)
                     fallback_opts["extractor_args"] = {
                         "youtube": {
-                            "player_client": ["ios", "android_vr"],
+                            "player_client": ["visionos", "android_vr"],
                         }
                     }
                     with yt_dlp.YoutubeDL(fallback_opts) as fallback_ydl:
@@ -146,23 +145,23 @@ class YtDlpService:
                 except (TimeoutError, concurrent.futures.TimeoutError):
                     raise MediaNetworkError(f"Media analysis timed out after {timeout} seconds.")
         except (yt_dlp.utils.UnsupportedError, yt_dlp.utils.ExtractorError) as e:
-            raise UnsupportedMediaSourceError(f"TrueTube does not currently support this URL: {e}")
+            raise UnsupportedMediaSourceError(f"TrueTube does not currently support this URL: {e}", code="UNSUPPORTED_SOURCE")
         except yt_dlp.utils.GeoRestrictedError as e:
-            raise UnsupportedMediaSourceError(f"This item is geo-restricted in this server region: {e}")
+            raise UnsupportedMediaSourceError(f"This item is geo-restricted in this server region: {e}", code="DOWNLOAD_FAILED")
         except yt_dlp.utils.DownloadError as e:
             err_msg = str(e).lower()
             if "geo restriction" in err_msg or "not available from your location" in err_msg:
-                raise UnsupportedMediaSourceError("This track is not available in this region due to SoundCloud/creator geo-restrictions.")
+                raise UnsupportedMediaSourceError("This track is not available in this region due to SoundCloud/creator geo-restrictions.", code="DOWNLOAD_FAILED")
             elif "private" in err_msg or "sign in" in err_msg or "restricted" in err_msg:
-                raise UnsupportedMediaSourceError("This media item is private, restricted, or requires authentication.")
+                raise UnsupportedMediaSourceError("This media item is private, restricted, or requires authentication.", code="DOWNLOAD_FAILED")
             elif "not found" in err_msg or "404" in err_msg or "incomplete" in err_msg:
                 raise InvalidMediaUrlError("The media item was not found or is unavailable.")
             elif "connection" in err_msg or "network" in err_msg or "timed out" in err_msg:
                 raise MediaNetworkError("Connection timed out or network error reaching media provider.")
             elif "empty media response" in err_msg:
-                raise UnsupportedMediaSourceError("Instagram restricted public access to this post without login. Please verify the post is public or copy a share link from the app.")
+                raise UnsupportedMediaSourceError("Instagram restricted public access to this post without login. Please verify the post is public or copy a share link from the app.", code="DOWNLOAD_FAILED")
             elif "blocked from accessing this post" in err_msg or "ip address is blocked" in err_msg:
-                raise UnsupportedMediaSourceError("This platform has temporarily rate-limited cloud requests for this post. Please try again shortly or use another link.")
+                raise UnsupportedMediaSourceError("This platform has temporarily rate-limited cloud requests for this post. Please try again shortly or use another link.", code="DOWNLOAD_FAILED")
             else:
                 raise YtDlpExtractionError(f"Could not extract media info: {e}")
         except (UnsupportedMediaSourceError, InvalidMediaUrlError, MediaNetworkError, YtDlpExtractionError):

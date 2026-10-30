@@ -124,7 +124,7 @@ def analyze_media(req: AnalyzeRequest):
     except UnsupportedMediaSourceError as e:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-            detail={"error": str(e), "code": "UNSUPPORTED_SOURCE"},
+            detail={"error": str(e), "code": getattr(e, "code", "UNSUPPORTED_SOURCE")},
         )
     except MediaNetworkError as e:
         raise HTTPException(
@@ -397,7 +397,7 @@ def direct_stream_download(
         cmd += ["--ffmpeg-location", settings.FFMPEG_PATH]
 
     if "youtube.com" in parsed_host or "youtu.be" in parsed_host:
-        cmd += ["--extractor-args", "youtube:player_client=tv_embedded,android,mweb"]
+        cmd += ["--extractor-args", "youtube:player_client=visionos,android_vr,web"]
 
     if effective_audio_only:
         cmd += ["-x", "--audio-format", target_codec, "--audio-quality", "0"]

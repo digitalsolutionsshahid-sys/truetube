@@ -154,27 +154,29 @@ class DownloadPipeline:
 
         ydl_opts["remote_components"] = ["ejs:github"]
         ydl_opts["js_runtimes"] = {"deno": {}, "node": {}}
-        try:
-            from yt_dlp.networking.impersonate import ImpersonateTarget
-            ydl_opts["impersonate"] = ImpersonateTarget.from_str("chrome")
-        except Exception:
-            pass
         cookie_file = settings.get_cookie_file()
         if cookie_file:
             ydl_opts["cookiefile"] = cookie_file
 
         # Parse host once — used for both YouTube detection and audio-domain detection
         parsed_host = (urlparse(job.url).hostname or "").lower()
+        is_youtube = "youtube.com" in parsed_host or "youtu.be" in parsed_host
+        is_instagram = "instagram.com" in parsed_host
 
         # For YouTube URLs: use android + visionos player clients to ensure
         # progressive stream availability and maximize format coverage.
-        is_youtube = "youtube.com" in parsed_host or "youtu.be" in parsed_host
         if is_youtube:
             ydl_opts["extractor_args"] = {
                 "youtube": {
                     "player_client": ["android", "visionos"],
                 }
             }
+        elif is_instagram:
+            try:
+                from yt_dlp.networking.impersonate import ImpersonateTarget
+                ydl_opts["impersonate"] = ImpersonateTarget.from_str("chrome")
+            except Exception:
+                pass
 
         postprocessors = []
 

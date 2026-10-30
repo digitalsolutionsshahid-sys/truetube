@@ -99,12 +99,6 @@ class YtDlpService:
         if ffmpeg_bin:
             opts["ffmpeg_location"] = ffmpeg_bin
 
-        try:
-            from yt_dlp.networking.impersonate import ImpersonateTarget
-            opts["impersonate"] = ImpersonateTarget.from_str("chrome")
-        except Exception:
-            pass
-
         return opts
 
     def extract_info(self, url: str, timeout: int = 30) -> MediaInfoResponse:
@@ -114,9 +108,10 @@ class YtDlpService:
         ydl_opts = self._get_base_opts()
 
         def _do_extract():
-            # Determine if this is a YouTube URL for player client selection
+            # Determine host for platform-specific client/impersonation selection
             parsed_host = (urlparse(url).hostname or "").lower()
             is_youtube = "youtube.com" in parsed_host or "youtu.be" in parsed_host
+            is_instagram = "instagram.com" in parsed_host
 
             # For YouTube: query android and visionos player clients to maximize format
             # coverage while maintaining fallback resilience on datacenter IP addresses.
@@ -127,6 +122,12 @@ class YtDlpService:
                         "player_client": ["android", "visionos"],
                     }
                 }
+            elif is_instagram:
+                try:
+                    from yt_dlp.networking.impersonate import ImpersonateTarget
+                    primary_opts["impersonate"] = ImpersonateTarget.from_str("chrome")
+                except Exception:
+                    pass
 
             try:
                 with yt_dlp.YoutubeDL(primary_opts) as ydl:

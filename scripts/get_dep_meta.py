@@ -2,7 +2,7 @@ import urllib.request
 import json
 
 TOKEN = 'a6d5b69c-36a3-4f7e-be07-d8a5441daed6'
-DEP_ID = '1abf3d42-b21f-4ed3-ba45-c5ec282d5071'
+DEP_ID = 'ee4ee47c-422a-471a-a0cc-601278f5893e'
 
 query = """
 query GetDep($id: String!) {

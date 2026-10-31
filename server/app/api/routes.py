@@ -400,7 +400,8 @@ def direct_stream_download(
         cmd += ["--ffmpeg-location", settings.FFMPEG_PATH]
 
     if "youtube.com" in parsed_host or "youtu.be" in parsed_host:
-        cmd += ["--extractor-args", "youtube:player_client=android,visionos"]
+        if not cookie_file:
+            cmd += ["--extractor-args", "youtube:player_client=visionos"]
     elif "instagram.com" in parsed_host:
         cmd += ["--impersonate", "chrome"]
 

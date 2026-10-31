@@ -163,14 +163,15 @@ class DownloadPipeline:
         is_youtube = "youtube.com" in parsed_host or "youtu.be" in parsed_host
         is_instagram = "instagram.com" in parsed_host
 
-        # For YouTube URLs: use android + visionos player clients to ensure
-        # progressive stream availability and maximize format coverage.
+        # For YouTube URLs: use visionos player client when unauthenticated to bypass
+        # bot-detection and ensure formats are available without SABR URL omission.
         if is_youtube:
-            ydl_opts["extractor_args"] = {
-                "youtube": {
-                    "player_client": ["android", "visionos"],
+            if not cookie_file:
+                ydl_opts["extractor_args"] = {
+                    "youtube": {
+                        "player_client": ["visionos"],
+                    }
                 }
-            }
         elif is_instagram:
             try:
                 from yt_dlp.networking.impersonate import ImpersonateTarget

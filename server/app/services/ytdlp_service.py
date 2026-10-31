@@ -113,15 +113,17 @@ class YtDlpService:
             is_youtube = "youtube.com" in parsed_host or "youtu.be" in parsed_host
             is_instagram = "instagram.com" in parsed_host
 
-            # For YouTube: query android and visionos player clients to maximize format
-            # coverage while maintaining fallback resilience on datacenter IP addresses.
+            # For YouTube: use visionos client when unauthenticated to bypass
+            # bot-detection and ensure formats are available without SABR URL omission.
             primary_opts = dict(ydl_opts)
+            has_cookies = bool(ydl_opts.get("cookiefile"))
             if is_youtube:
-                primary_opts["extractor_args"] = {
-                    "youtube": {
-                        "player_client": ["android", "visionos"],
+                if not has_cookies:
+                    primary_opts["extractor_args"] = {
+                        "youtube": {
+                            "player_client": ["visionos"],
+                        }
                     }
-                }
             elif is_instagram:
                 try:
                     from yt_dlp.networking.impersonate import ImpersonateTarget
@@ -135,12 +137,12 @@ class YtDlpService:
             except (yt_dlp.utils.DownloadError, yt_dlp.utils.ExtractorError) as e:
                 err_lower = str(e).lower()
                 if "bot" in err_lower or "sign in" in err_lower or "confirm" in err_lower or "reload" in err_lower or "precondition" in err_lower:
-                    logger.warning("YouTube challenge/reload detected on %s, retrying with android fallback...", url)
+                    logger.warning("YouTube challenge/reload detected on %s, retrying with visionos fallback...", url)
                     fallback_opts = dict(ydl_opts)
                     fallback_opts.pop("cookiefile", None)
                     fallback_opts["extractor_args"] = {
                         "youtube": {
-                            "player_client": ["android"],
+                            "player_client": ["visionos"],
                         }
                     }
                     try:

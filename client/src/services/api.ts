@@ -4,7 +4,7 @@ import type {
   FormatContainer,
 } from '../types/media';
 
-const BASE_URL = import.meta.env.VITE_API_URL ? (import.meta.env.VITE_API_URL as string).replace(/\/+$/, '') : '';
+const BASE_URL = ((import.meta.env.VITE_API_URL as string) || 'https://truetube.fly.dev').replace(/\/+$/, '');
 const API_BASE = `${BASE_URL}/api`;
 
 export interface CreateJobPayload {

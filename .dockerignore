@@ -1,0 +1,14 @@
+.git
+.github
+node_modules
+client
+storage
+temp
+downloads
+scratch*
+*.part
+*.ytdl
+__pycache__
+*.pyc
+*.pyo
+.pytest_cache

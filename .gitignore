@@ -16,7 +16,10 @@ venv/
 # Storage & Temporary files
 downloads/
 temp/
+storage/
 storage/temp/
+storage/cookies.txt
+cookies*.txt
 *.part
 *.ytdl
 

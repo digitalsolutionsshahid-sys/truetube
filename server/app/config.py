@@ -1,4 +1,5 @@
 import os
+import json
 import shutil
 from pathlib import Path
 from pydantic import BaseModel
@@ -44,6 +45,35 @@ class Settings(BaseModel):
     COOKIES: str = os.getenv("COOKIES", "")
     INSTAGRAM_COOKIES: str = os.getenv("INSTAGRAM_COOKIES", "")
 
+    def _normalize_cookie_content(self, raw: str) -> str:
+        """Converts JSON cookie arrays (from browser extensions) to Netscape HTTP cookie format."""
+        cleaned = raw.strip()
+        if not cleaned:
+            return ""
+        if (cleaned.startswith("[") and cleaned.endswith("]")) or (cleaned.startswith("{") and cleaned.endswith("}")):
+            try:
+                data = json.loads(cleaned)
+                if isinstance(data, dict):
+                    data = [data]
+                if isinstance(data, list):
+                    lines = []
+                    for c in data:
+                        if isinstance(c, dict):
+                            domain = c.get("domain", "")
+                            include_sub = "TRUE" if domain.startswith(".") else "FALSE"
+                            path = c.get("path", "/")
+                            secure = "TRUE" if c.get("secure", False) else "FALSE"
+                            expires = str(int(c.get("expirationDate", 0) or 0))
+                            name = c.get("name", "")
+                            value = c.get("value", "")
+                            if name and domain:
+                                lines.append(f"{domain}\t{include_sub}\t{path}\t{secure}\t{expires}\t{name}\t{value}")
+                    if lines:
+                        return "\n".join(lines)
+            except Exception:
+                pass
+        return cleaned
+
     def get_cookie_file(self) -> str | None:
         """Returns the path to a valid cookies file, or writes raw COOKIES / YOUTUBE_COOKIES content to disk."""
         path_candidate = self.COOKIES_PATH or self.YOUTUBE_COOKIES_PATH
@@ -52,14 +82,21 @@ class Settings(BaseModel):
 
         cookie_parts = []
         if self.COOKIES:
-            cookie_parts.append(self.COOKIES.strip())
+            norm = self._normalize_cookie_content(self.COOKIES)
+            if norm:
+                cookie_parts.append(norm)
         if self.YOUTUBE_COOKIES:
-            cookie_parts.append(self.YOUTUBE_COOKIES.strip())
+            norm = self._normalize_cookie_content(self.YOUTUBE_COOKIES)
+            if norm:
+                cookie_parts.append(norm)
         if self.INSTAGRAM_COOKIES:
-            cookie_parts.append(self.INSTAGRAM_COOKIES.strip())
+            norm = self._normalize_cookie_content(self.INSTAGRAM_COOKIES)
+            if norm:
+                cookie_parts.append(norm)
 
-        raw_cookies = "\n\n".join(cookie_parts)
-        if raw_cookies:
+        if cookie_parts:
+            header = "# Netscape HTTP Cookie File\n# https://curl.se/docs/http-cookies.html\n\n"
+            raw_cookies = header + "\n\n".join(cookie_parts) + "\n"
             target = self.STORAGE_PATH / "cookies.txt"
             try:
                 if not target.exists() or target.read_text(encoding="utf-8") != raw_cookies:

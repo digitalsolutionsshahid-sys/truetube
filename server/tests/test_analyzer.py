@@ -317,3 +317,32 @@ def test_concurrency_limiter():
     assert limiter.active_count == 1
     limiter.release()
     assert limiter.active_count == 0
+
+def test_cookie_normalization_json_to_netscape():
+    """Verify that JSON-formatted cookies from browser extensions convert to valid Netscape format."""
+    import json
+    import http.cookiejar
+    from app.config import settings
+
+    sample_json = json.dumps([
+        {
+            "domain": ".youtube.com",
+            "name": "TEST_COOKIE",
+            "value": "12345",
+            "path": "/",
+            "secure": True,
+            "expirationDate": 1828021581
+        }
+    ])
+
+    old_yt = settings.YOUTUBE_COOKIES
+    try:
+        settings.YOUTUBE_COOKIES = sample_json
+        cookie_file = settings.get_cookie_file()
+        assert cookie_file is not None
+        cj = http.cookiejar.MozillaCookieJar(cookie_file)
+        cj.load(ignore_discard=True, ignore_expires=True)
+        cookie_names = [c.name for c in cj]
+        assert "TEST_COOKIE" in cookie_names
+    finally:
+        settings.YOUTUBE_COOKIES = old_yt

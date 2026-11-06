@@ -50,7 +50,7 @@ export const ErrorCard: React.FC<ErrorCardProps> = ({ type, message, onAction, o
   const Icon = cur.icon;
 
   return (
-    <div className="w-full max-w-lg mx-auto p-6 rounded-3xl bg-[#0D111D] border border-[#1E293B] shadow-2xl text-center animate-fadeIn">
+    <div className="w-full max-w-lg mx-auto p-6 rounded-3xl bg-surface-card border border-subtle text-center animate-fadeIn">
       {/* Icon badge */}
       <div
         className={`w-14 h-14 rounded-2xl ${cur.bgColor} border flex items-center justify-center mx-auto mb-4 shadow-lg`}
@@ -59,10 +59,10 @@ export const ErrorCard: React.FC<ErrorCardProps> = ({ type, message, onAction, o
       </div>
 
       {/* Title */}
-      <h3 className="text-lg font-bold text-white mb-2">{cur.title}</h3>
+      <h3 className="text-lg font-bold text-primary mb-2">{cur.title}</h3>
 
       {/* Message */}
-      <p className="text-xs sm:text-sm text-slate-400 mb-6 leading-relaxed max-w-sm mx-auto">
+      <p className="text-xs sm:text-sm text-muted mb-6 leading-relaxed max-w-sm mx-auto">
         {message || cur.defaultMsg}
       </p>
 
@@ -72,7 +72,7 @@ export const ErrorCard: React.FC<ErrorCardProps> = ({ type, message, onAction, o
           <button
             type="button"
             onClick={onAction}
-            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-medium transition-all active:scale-95 shadow-md shadow-indigo-500/20"
+            className="inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-xs sm:text-sm font-medium transition-colors shadow-sm cursor-pointer"
           >
             <RefreshCw className="w-3.5 h-3.5" />
             <span>{cur.actionText}</span>
@@ -82,7 +82,7 @@ export const ErrorCard: React.FC<ErrorCardProps> = ({ type, message, onAction, o
           <button
             type="button"
             onClick={onReset}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs sm:text-sm font-medium transition-all active:scale-95 border border-slate-700"
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-surface-well hover:bg-surface-well/80 text-muted hover:text-primary text-xs sm:text-sm font-medium transition-colors border border-subtle hover:border-hover cursor-pointer"
           >
             <span>Back to Home</span>
           </button>

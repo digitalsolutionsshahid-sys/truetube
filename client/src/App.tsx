@@ -32,7 +32,7 @@ const AppContent: React.FC = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#07090E] text-slate-100 flex flex-col selection:bg-indigo-600 selection:text-white">
+    <div className="min-h-screen bg-surface-bg text-primary flex flex-col selection:bg-accent selection:text-white">
       {/* Navbar with Router integration */}
       <Navbar />
 

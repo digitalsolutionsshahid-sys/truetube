@@ -7,18 +7,14 @@ import { AdvancedOptionsDrawer } from '../components/AdvancedOptionsDrawer';
 import { RecentDownloads } from '../components/RecentDownloads';
 import { ErrorCard } from '../components/ErrorCards';
 import type { ErrorType } from '../components/ErrorCards';
-import { ThreeDScene } from '../components/ThreeDScene';
 import { useRouter } from '../router/useRouter';
 import {
   Zap,
   Sparkles,
-  Layers,
-  CheckCircle,
   Music,
   ArrowRight,
   ChevronDown,
   Video,
-  Lock,
   Globe,
   Radio,
   Tv,
@@ -266,41 +262,31 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
     { name: 'Facebook', icon: Globe, color: 'text-blue-400' },
     { name: 'SoundCloud', icon: Radio, color: 'text-amber-400' },
     { name: 'Reddit', icon: Globe, color: 'text-orange-400' },
-    { name: 'Twitch', icon: Tv, color: 'text-purple-400' },
-    { name: '1000+ More', icon: Zap, color: 'text-indigo-400' },
+    { name: 'Twitch', icon: Tv, color: 'text-muted' },
+    { name: '1000+ More', icon: Zap, color: 'text-accent' },
   ];
 
-  // 6 Features Cards
-  const featureList = [
+  // Technical Specifications
+  const technicalSpecs = [
     {
-      icon: Globe,
-      title: '1,000+ Sites Supported',
-      desc: 'Native compatibility with YouTube, TikTok, Vimeo, Twitter, Instagram, and over a thousand streaming platforms via yt-dlp.',
+      category: 'Engine & Extraction',
+      title: 'yt-dlp Native Pipeline',
+      detail: 'yt-dlp native extraction pipeline with adaptive player client fallbacks for continuous stream resolution and token rotation.',
     },
     {
-      icon: Sparkles,
-      title: 'Authentic 4K / 8K Video',
-      desc: 'Grab pristine native video up to 4K Ultra HD and 60fps with zero recompression or quality loss.',
+      category: 'Stream Processing',
+      title: 'FFmpeg Stream Muxing',
+      detail: 'FFmpeg audio/video muxing, stream stitching, and lossless container delivery with zero re-encoding artifacts.',
     },
     {
-      icon: Music,
-      title: 'High-Bitrate MP3 Audio',
-      desc: 'Extract crystal-clear audio tracks up to 320kbps MP3 or lossless M4A with metadata embedded.',
+      category: 'Supported Codecs',
+      title: 'H.264 / AV1 / VP9 & MP3 / AAC',
+      detail: 'Video in H.264 / AV1 / VP9 (MP4 container); Audio in MP3 (up to 320kbps) & AAC.',
     },
     {
-      icon: CheckCircle,
-      title: 'Zero Watermarks',
-      desc: 'Pure, clean media downloads directly from the source server without artificial logos or banners.',
-    },
-    {
-      icon: Layers,
-      title: 'Subtitles & Captions',
-      desc: 'Automatically package multi-language closed captions and subtitle tracks into your MP4 container.',
-    },
-    {
-      icon: Lock,
-      title: 'Secure & Private',
-      desc: 'Links are processed strictly in memory and temporary stream files are immediately purged upon delivery.',
+      category: 'Privacy & Storage',
+      title: 'In-Memory Stream Piping',
+      detail: 'In-memory stream piping with zero server persistence and automatic temp chunk purging upon delivery.',
     },
   ];
 
@@ -330,7 +316,6 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
         <>
           {/* Hero Section */}
           <div className="relative">
-            <ThreeDScene />
             <HeroInput
               url={url}
               onChangeUrl={setUrl}
@@ -341,8 +326,8 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
 
           {/* Supported Platforms Strip */}
           <section className="max-w-5xl mx-auto px-4 -mt-4">
-            <div className="p-4 rounded-2xl bg-[#0D111D]/80 border border-[#1E293B] shadow-xl">
-              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider text-center mb-3">
+            <div className="p-4 rounded-2xl bg-surface-card border border-subtle shadow-sm">
+              <p className="text-xs font-medium text-muted text-center mb-3">
                 Supported Media Platforms & Streaming Services
               </p>
               <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-2.5">
@@ -351,7 +336,7 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
                   return (
                     <div
                       key={p.name}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-medium text-slate-300 hover:border-slate-700 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-well border border-subtle text-xs font-medium text-muted hover:border-hover transition-colors"
                     >
                       <Icon className={`w-3.5 h-3.5 ${p.color}`} />
                       <span>{p.name}</span>
@@ -365,74 +350,75 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
           {/* 3-Step "How It Works" Strip directly under hero */}
           <section className="max-w-5xl mx-auto px-4 pt-2">
             <div className="text-center mb-6">
-              <span className="text-xs font-semibold text-indigo-400 tracking-wider uppercase">
-                Fast & Intuitive
+              <span className="text-xs font-medium text-muted">
+                Workflow
               </span>
-              <h2 className="text-xl sm:text-2xl font-bold text-white mt-1">
+              <h2 className="text-xl sm:text-2xl font-bold text-primary mt-1">
                 How TrueTube Works
               </h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-5 rounded-2xl bg-[#0D111D] border border-[#1E293B] hover:border-indigo-500/30 transition-all shadow-xl group">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-mono font-bold text-sm mb-3.5 group-hover:scale-105 transition-transform">
+              <div className="p-5 rounded-2xl bg-surface-card border border-subtle hover:border-hover transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-surface-well text-accent border border-subtle flex items-center justify-center font-mono font-medium text-xs mb-3">
                   01
                 </div>
-                <h3 className="text-sm font-bold text-white mb-1">1. Paste Video URL</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Copy any media link from YouTube, TikTok, Vimeo, or 1000+ sites and paste it in the field above.
+                <h3 className="text-sm font-semibold text-primary mb-1">1. Paste Video URL</h3>
+                <p className="text-xs text-muted leading-relaxed">
+                  Copy any media link from YouTube, TikTok, Vimeo, or supported sources and paste it in the field above.
                 </p>
               </div>
 
-              <div className="p-5 rounded-2xl bg-[#0D111D] border border-[#1E293B] hover:border-indigo-500/30 transition-all shadow-xl group">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-mono font-bold text-sm mb-3.5 group-hover:scale-105 transition-transform">
+              <div className="p-5 rounded-2xl bg-surface-card border border-subtle hover:border-hover transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-surface-well text-accent border border-subtle flex items-center justify-center font-mono font-medium text-xs mb-3">
                   02
                 </div>
-                <h3 className="text-sm font-bold text-white mb-1">2. Choose Format & Quality</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
+                <h3 className="text-sm font-semibold text-primary mb-1">2. Choose Format & Quality</h3>
+                <p className="text-xs text-muted leading-relaxed">
                   Select your desired MP4 resolution up to 4K or switch to high-bitrate MP3 audio extraction.
                 </p>
               </div>
 
-              <div className="p-5 rounded-2xl bg-[#0D111D] border border-[#1E293B] hover:border-indigo-500/30 transition-all shadow-xl group">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center font-mono font-bold text-sm mb-3.5 group-hover:scale-105 transition-transform">
+              <div className="p-5 rounded-2xl bg-surface-card border border-subtle hover:border-hover transition-colors">
+                <div className="w-8 h-8 rounded-lg bg-surface-well text-accent border border-subtle flex items-center justify-center font-mono font-medium text-xs mb-3">
                   03
                 </div>
-                <h3 className="text-sm font-bold text-white mb-1">3. Direct Download</h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
+                <h3 className="text-sm font-semibold text-primary mb-1">3. Direct Download</h3>
+                <p className="text-xs text-muted leading-relaxed">
                   Streams merge automatically and download straight into Chrome with zero server retention.
                 </p>
               </div>
             </div>
           </section>
 
-          {/* 6-Card Features Grid */}
-          <section className="max-w-5xl mx-auto px-4 pt-2">
+          {/* Technical Specifications Grid */}
+          <section className="max-w-5xl mx-auto px-4 pt-4">
             <div className="text-center mb-6">
-              <span className="text-xs font-semibold text-indigo-400 tracking-wider uppercase">
-                Engineered for Excellence
+              <span className="text-xs font-medium text-muted">
+                Architecture & Standards
               </span>
-              <h2 className="text-xl sm:text-2xl font-bold text-white mt-1">
-                Why Creators Prefer TrueTube
+              <h2 className="text-xl sm:text-2xl font-bold text-primary mt-1">
+                Technical Specifications
               </h2>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {featureList.map((f) => {
-                const Icon = f.icon;
-                return (
-                  <div
-                    key={f.title}
-                    className="p-5 rounded-2xl bg-[#0D111D] border border-[#1E293B] hover:border-indigo-500/40 hover:bg-[#131B2E] transition-all shadow-xl group"
-                  >
-                    <div className="w-9 h-9 rounded-xl bg-indigo-600/15 text-indigo-400 flex items-center justify-center mb-3 border border-indigo-500/20 group-hover:scale-110 transition-transform">
-                      <Icon className="w-4 h-4" />
-                    </div>
-                    <h4 className="text-sm font-bold text-white mb-1">{f.title}</h4>
-                    <p className="text-xs text-slate-400 leading-relaxed">{f.desc}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {technicalSpecs.map((spec, idx) => (
+                <div
+                  key={spec.category}
+                  className="p-5 rounded-2xl bg-surface-card border border-subtle hover:border-hover transition-colors"
+                >
+                  <div className="text-xs font-mono font-medium text-accent mb-1.5">
+                    0{idx + 1} // {spec.category}
                   </div>
-                );
-              })}
+                  <h3 className="text-sm font-semibold text-primary mb-1">
+                    {spec.title}
+                  </h3>
+                  <p className="text-xs text-muted leading-relaxed">
+                    {spec.detail}
+                  </p>
+                </div>
+              ))}
             </div>
           </section>
 
@@ -450,11 +436,11 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
           {/* FAQ Teaser Accordion on Homepage */}
           <section className="max-w-4xl mx-auto px-4 pt-4">
             <div className="text-center mb-6">
-              <span className="text-xs font-semibold text-indigo-400 tracking-wider uppercase">
-                Common Questions
+              <span className="text-xs font-medium text-muted">
+                Frequently Asked
               </span>
-              <h2 className="text-xl sm:text-2xl font-bold text-white mt-1">
-                Frequently Asked Questions
+              <h2 className="text-xl sm:text-2xl font-bold text-primary mt-1">
+                Common Questions
               </h2>
             </div>
 
@@ -464,23 +450,23 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
                 return (
                   <div
                     key={faq.q}
-                    className="rounded-2xl bg-[#0D111D] border border-[#1E293B] overflow-hidden transition-all duration-200"
+                    className="rounded-2xl bg-surface-card border border-subtle overflow-hidden transition-colors"
                   >
                     <button
                       type="button"
                       onClick={() => setOpenFaq(isOpen ? null : idx)}
-                      className="w-full flex items-center justify-between p-4 sm:p-5 text-left text-sm sm:text-base font-semibold text-white hover:text-indigo-300 transition-colors cursor-pointer"
+                      className="w-full flex items-center justify-between p-4 sm:p-5 text-left text-sm sm:text-base font-medium text-primary hover:text-accent transition-colors cursor-pointer"
                       aria-expanded={isOpen}
                     >
                       <span>{faq.q}</span>
                       <ChevronDown
-                        className={`w-4 h-4 text-slate-400 transition-transform duration-200 flex-shrink-0 ml-4 ${
-                          isOpen ? 'rotate-180 text-indigo-400' : ''
+                        className={`w-4 h-4 text-muted transition-transform duration-200 flex-shrink-0 ml-4 ${
+                          isOpen ? 'rotate-180 text-accent' : ''
                         }`}
                       />
                     </button>
                     {isOpen && (
-                      <div className="px-4 sm:px-5 pb-4 pt-1 text-xs sm:text-sm text-slate-400 leading-relaxed border-t border-[#1E293B]/60">
+                      <div className="px-4 sm:px-5 pb-4 pt-1 text-xs sm:text-sm text-muted leading-relaxed border-t border-subtle">
                         {faq.a}
                       </div>
                     )}
@@ -493,9 +479,9 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
               <button
                 type="button"
                 onClick={() => navigateTo('faq')}
-                className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-medium hover:underline transition-all cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline font-medium whitespace-nowrap transition-colors cursor-pointer"
               >
-                <span>View all frequently asked questions</span>
+                <span>View all FAQs</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
@@ -516,7 +502,7 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
                 setUrl('');
                 setAppState('IDLE');
               }}
-              className="inline-flex items-center gap-1.5 text-xs text-indigo-400 hover:text-indigo-300 font-medium transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 text-xs text-accent hover:underline font-medium transition-colors cursor-pointer"
             >
               ← Paste another link
             </button>
@@ -544,11 +530,11 @@ export const HomePage: React.FC<HomePageProps> = ({ addToast }) => {
       {appState === 'RECENT_DOWNLOADS' && (
         <div className="max-w-4xl mx-auto px-4 space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white">Full Download History</h2>
+            <h2 className="text-xl font-bold text-primary">Full Download History</h2>
             <button
               type="button"
               onClick={() => setAppState('IDLE')}
-              className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors cursor-pointer"
+              className="text-xs text-accent hover:underline transition-colors cursor-pointer"
             >
               ← Back to Downloader
             </button>

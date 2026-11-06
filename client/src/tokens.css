@@ -1,0 +1,89 @@
+/* Hallmark */
+:root {
+  /* Surfaces */
+  --color-surface-bg: #090A0E;
+  --color-surface-card: #11141D;
+  --color-surface-well: #161A26;
+
+  /* Architectural Borders */
+  --color-border-subtle: #1F2433;
+  --color-border-hover: #2E354B;
+
+  /* Typography */
+  --color-text-primary: #F4F5F8;
+  --color-text-muted: #868F9F;
+  --color-text-faint: #525B6C;
+
+  /* Accent (Signal Cobalt) */
+  --color-accent: #2563EB;
+  --color-accent-hover: #1D4ED8;
+
+  /* Status */
+  --color-status-success: #10B981;
+  --color-status-error: #EF4444;
+}
+
+/* Background Utilities */
+.bg-surface-bg {
+  background-color: var(--color-surface-bg);
+}
+
+.bg-surface-card {
+  background-color: var(--color-surface-card);
+  color: var(--color-text-primary);
+}
+
+.bg-surface-well {
+  background-color: var(--color-surface-well);
+  color: var(--color-text-primary);
+}
+
+.bg-accent {
+  background-color: var(--color-accent);
+}
+
+.bg-accent-hover:hover {
+  background-color: var(--color-accent-hover);
+}
+
+/* Border Utilities */
+.border-subtle {
+  border-color: var(--color-border-subtle);
+}
+
+.border-hover:hover {
+  border-color: var(--color-border-hover);
+}
+
+/* Text Utilities */
+.text-primary {
+  color: var(--color-text-primary);
+}
+
+.text-muted {
+  color: var(--color-text-muted);
+}
+
+.text-faint {
+  color: var(--color-text-faint);
+}
+
+.text-accent {
+  color: var(--color-accent);
+}
+
+.text-status-success {
+  color: var(--color-status-success);
+}
+
+.text-status-error {
+  color: var(--color-status-error);
+}
+
+.whitespace-nowrap, button {
+  white-space: nowrap;
+}
+
+button:active {
+  transform: translateY(0.5px);
+}

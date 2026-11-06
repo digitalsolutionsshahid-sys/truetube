@@ -90,23 +90,23 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
   return (
     <div className="w-full max-w-5xl mx-auto px-4 space-y-6">
       {/* Media Header Summary Card */}
-      <div className="flex items-center gap-4 p-4 rounded-2xl bg-[#0D111D] border border-[#1E293B] shadow-xl">
+      <div className="flex items-center gap-4 p-4 rounded-2xl bg-surface-card border border-subtle">
         <img
           src={media.thumbnail}
           alt={media.title}
-          className="w-24 h-14 sm:w-32 sm:h-18 object-cover rounded-xl border border-slate-800 flex-shrink-0"
+          className="w-24 h-14 sm:w-32 sm:h-18 object-cover rounded-xl border border-subtle flex-shrink-0"
         />
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm sm:text-base font-bold text-white truncate mb-1">
+          <h3 className="text-sm sm:text-base font-bold text-primary truncate mb-1">
             {media.title}
           </h3>
-          <div className="flex items-center gap-2 text-xs text-slate-400">
-            <span className="text-slate-300 font-medium">{media.uploader}</span>
+          <div className="flex items-center gap-2 text-xs text-muted">
+            <span className="text-primary font-medium">{media.uploader}</span>
             {media.uploader_verified && (
-              <CheckCircle2 className="w-3 h-3 text-indigo-400" />
+              <CheckCircle2 className="w-3 h-3 text-accent" />
             )}
             <span>•</span>
-            <span>{media.view_count_string}</span>
+            <span className="font-mono">{media.view_count_string}</span>
             <span>•</span>
             <span>{media.upload_date}</span>
           </div>
@@ -114,17 +114,17 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
       </div>
 
       {/* Main Options Container */}
-      <div className="bg-[#0D111D] border border-[#1E293B] rounded-3xl p-5 sm:p-7 shadow-2xl">
+      <div className="bg-surface-card border border-subtle rounded-3xl p-5 sm:p-7">
         {/* Mode Selector Tabs */}
-        <div className="flex items-center gap-2 p-1 bg-slate-900/80 rounded-xl border border-slate-800 w-fit mb-6">
+        <div className="flex items-center gap-2 p-1 bg-surface-well rounded-xl border border-subtle w-fit mb-6">
           {!isAudioOnly && (
             <button
               type="button"
               onClick={() => setTab('video')}
-              className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+              className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
                 tab === 'video'
-                  ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-accent text-white shadow-sm'
+                  : 'text-muted hover:text-primary'
               }`}
             >
               <VideoIcon className="w-4 h-4" />
@@ -134,10 +134,10 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
           <button
             type="button"
             onClick={() => setTab('audio')}
-            className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-5 py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors cursor-pointer ${
               tab === 'audio'
-                ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-600/30'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-accent text-white shadow-sm'
+                : 'text-muted hover:text-primary'
             }`}
           >
             <Music className="w-4 h-4" />
@@ -150,7 +150,7 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 mb-6">
             {/* Format Column (4 cols) */}
             <div className="md:col-span-4 space-y-2">
-              <label id="format-group-label" className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-3">
+              <label id="format-group-label" className="text-xs font-semibold text-muted block mb-3">
                 Format
               </label>
               <div role="radiogroup" aria-labelledby="format-group-label" className="space-y-2">
@@ -163,28 +163,28 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                       role="radio"
                       aria-checked={isSelected}
                       onClick={() => setSelectedFormat(f.id)}
-                      className={`w-full text-left relative flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                      className={`w-full text-left relative flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                         isSelected
-                          ? 'bg-indigo-950/40 border-indigo-500 shadow-md shadow-indigo-500/10'
-                          : 'bg-[#131B2E]/60 border-[#1E293B] hover:border-slate-700 hover:bg-[#131B2E]'
+                          ? 'bg-accent/10 border-accent'
+                          : 'bg-surface-well/60 border-subtle hover:border-hover hover:bg-surface-well'
                       }`}
                     >
                       <div className="min-w-0 pr-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-sm text-white">{f.name}</span>
+                          <span className="font-bold text-sm text-primary">{f.name}</span>
                           {f.badge && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                            <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-accent/15 text-accent border border-accent/30">
                               {f.badge}
                             </span>
                           )}
                         </div>
-                        <p className="text-xs text-slate-400 truncate mt-0.5">{f.desc}</p>
+                        <p className="text-xs text-muted truncate mt-0.5">{f.desc}</p>
                       </div>
                       <div
                         className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${
                           isSelected
-                            ? 'border-indigo-500 bg-indigo-600'
-                            : 'border-slate-600 bg-transparent'
+                            ? 'border-accent bg-accent'
+                            : 'border-subtle bg-transparent'
                         }`}
                       >
                         {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
@@ -197,7 +197,7 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
 
             {/* Quality Column (5 cols) */}
             <div className="md:col-span-5 space-y-2">
-              <label id="quality-group-label" className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-3">
+              <label id="quality-group-label" className="text-xs font-semibold text-muted block mb-3">
                 Quality
               </label>
               <div role="radiogroup" aria-labelledby="quality-group-label" className="space-y-2 max-h-[290px] overflow-y-auto pr-1">
@@ -210,40 +210,40 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                       role="radio"
                       aria-checked={isSelected}
                       onClick={() => setSelectedQualityId(q.id)}
-                      className={`w-full text-left flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                      className={`w-full text-left flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                         isSelected
-                          ? 'bg-indigo-950/40 border-indigo-500 shadow-md shadow-indigo-500/10'
-                          : 'bg-[#131B2E]/60 border-[#1E293B] hover:border-slate-700 hover:bg-[#131B2E]'
+                          ? 'bg-accent/10 border-accent'
+                          : 'bg-surface-well/60 border-subtle hover:border-hover hover:bg-surface-well'
                       }`}
                     >
                       <div className="flex items-center gap-3">
                         <div
                           className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${
                             isSelected
-                              ? 'border-indigo-500 bg-indigo-600'
-                              : 'border-slate-600 bg-transparent'
+                              ? 'border-accent bg-accent'
+                              : 'border-subtle bg-transparent'
                           }`}
                         >
                           {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-xs sm:text-sm text-white">
+                            <span className="font-bold text-xs sm:text-sm text-primary">
                               {q.label}
                             </span>
                             {q.is_recommended && (
-                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-accent/15 text-accent border border-accent/30">
                                 Recommended
                               </span>
                             )}
                           </div>
-                          <span className="text-[11px] text-slate-400 font-mono">
-                            {q.resolution} • {q.fps}fps
+                          <span className="text-[11px] text-muted">
+                            <span className="font-mono">{q.resolution}</span> • <span className="font-mono">{q.fps}</span>fps
                           </span>
                         </div>
                       </div>
 
-                      <span className="text-xs font-mono font-medium text-slate-300">
+                      <span className="text-xs font-mono font-medium text-primary">
                         {q.approx_size_str}
                       </span>
                     </button>
@@ -254,8 +254,8 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
 
             {/* Audio Column (3 cols) */}
             <div className="md:col-span-3 space-y-2">
-              <label id="audio-group-label" className="text-xs font-semibold text-slate-300 uppercase tracking-wider block mb-3">
-                Audio Track
+              <label id="audio-group-label" className="text-xs font-semibold text-muted block mb-3">
+                Audio track
               </label>
               <div role="radiogroup" aria-labelledby="audio-group-label" className="space-y-2">
                 {media.audio_streams.map((a) => {
@@ -267,25 +267,25 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                       role="radio"
                       aria-checked={isSelected}
                       onClick={() => setSelectedAudioId(a.id)}
-                      className={`w-full text-left flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                      className={`w-full text-left flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                         isSelected
-                          ? 'bg-indigo-950/40 border-indigo-500 shadow-md shadow-indigo-500/10'
-                          : 'bg-[#131B2E]/60 border-[#1E293B] hover:border-slate-700 hover:bg-[#131B2E]'
+                          ? 'bg-accent/10 border-accent'
+                          : 'bg-surface-well/60 border-subtle hover:border-hover hover:bg-surface-well'
                       }`}
                     >
                       <div>
-                        <span className="font-bold text-xs sm:text-sm text-white block">
+                        <span className="font-bold text-xs sm:text-sm text-primary block">
                           Original Audio {a.is_default && '(Default)'}
                         </span>
-                        <span className="text-[11px] text-slate-400 font-mono">
+                        <span className="text-[11px] text-muted font-mono">
                           {a.format} • {a.bitrate}
                         </span>
                       </div>
                       <div
                         className={`w-4 h-4 rounded-full border flex items-center justify-center flex-shrink-0 ${
                           isSelected
-                            ? 'border-indigo-500 bg-indigo-600'
-                            : 'border-slate-600 bg-transparent'
+                            ? 'border-accent bg-accent'
+                            : 'border-subtle bg-transparent'
                         }`}
                       >
                         {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
@@ -308,25 +308,25 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
                   role="radio"
                   aria-checked={isSelected}
                   onClick={() => setSelectedAudioFormat(af.id)}
-                  className={`w-full text-left p-4 rounded-2xl border cursor-pointer transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+                  className={`w-full text-left p-4 rounded-2xl border cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                     isSelected
-                      ? 'bg-indigo-950/50 border-indigo-500 shadow-lg shadow-indigo-500/20'
-                      : 'bg-[#131B2E]/60 border-[#1E293B] hover:border-slate-700 hover:bg-[#131B2E]'
+                      ? 'bg-accent/10 border-accent'
+                      : 'bg-surface-well/60 border-subtle hover:border-hover hover:bg-surface-well'
                   }`}
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-base font-bold text-white">{af.name}</span>
+                    <span className="text-base font-bold text-primary">{af.name}</span>
                     <div
                       className={`w-4 h-4 rounded-full border flex items-center justify-center ${
                         isSelected
-                          ? 'border-indigo-500 bg-indigo-600'
-                          : 'border-slate-600 bg-transparent'
+                          ? 'border-accent bg-accent'
+                          : 'border-subtle bg-transparent'
                       }`}
                     >
                       {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
                     </div>
                   </div>
-                  <p className="text-xs text-slate-400">{af.desc}</p>
+                  <p className="text-xs text-muted">{af.desc}</p>
                 </button>
               );
             })}
@@ -334,22 +334,22 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
         )}
 
         {/* Advanced Options trigger toggle */}
-        <div className="pt-4 border-t border-[#1E293B] flex items-center justify-between mb-6">
+        <div className="pt-4 border-t border-subtle flex items-center justify-between mb-6">
           <button
             type="button"
             onClick={onOpenAdvancedOptions}
-            className="inline-flex items-center gap-2 text-xs sm:text-sm text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
+            className="inline-flex items-center gap-2 text-xs sm:text-sm text-accent hover:text-accent-hover font-medium transition-colors cursor-pointer"
           >
             <Sliders className="w-4 h-4" />
             <span>Advanced Options</span>
           </button>
-          <span className="text-xs text-slate-500">Subtitles, metadata, custom naming</span>
+          <span className="text-xs text-faint">Subtitles, metadata, custom naming</span>
         </div>
 
         {/* Active Direct Download Loading Banner */}
         {isDownloading && (
-          <div className="flex items-center justify-center gap-2.5 p-3.5 rounded-xl bg-indigo-950/50 border border-indigo-500/30 text-indigo-300 text-xs sm:text-sm animate-pulse mb-4">
-            <Loader2 className="w-4 h-4 animate-spin text-indigo-400 flex-shrink-0" />
+          <div className="flex items-center justify-center gap-2.5 p-3.5 rounded-xl bg-accent/10 border border-accent/30 text-accent text-xs sm:text-sm animate-pulse mb-4">
+            <Loader2 className="w-4 h-4 animate-spin text-accent flex-shrink-0" />
             <span>{tab === 'audio' || isAudioOnly ? 'Fetching Audio... Download starting shortly.' : 'Fetching Video... Download starting shortly.'}</span>
           </div>
         )}
@@ -360,10 +360,10 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
             type="button"
             onClick={handleDownload}
             disabled={isDownloading}
-            className={`w-full sm:flex-1 flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-xl text-white font-semibold text-sm sm:text-base shadow-xl transition-all active:scale-[0.98] ${
+            className={`w-full sm:flex-1 flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-xl text-white font-semibold text-sm sm:text-base shadow-sm transition-colors cursor-pointer ${
               isDownloading
-                ? 'bg-indigo-700/70 cursor-wait'
-                : 'bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 hover:from-indigo-500 hover:to-violet-500 shadow-indigo-600/30 hover:shadow-indigo-600/50 cursor-pointer'
+                ? 'bg-accent/70 cursor-wait'
+                : 'bg-accent hover:bg-accent-hover'
             }`}
           >
             {isDownloading ? (
@@ -383,12 +383,12 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
             <button
               type="button"
               onClick={handleCopyLink}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl border border-[#1E293B] bg-slate-900/60 hover:bg-slate-800 text-xs sm:text-sm font-medium text-slate-300 transition-colors"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl border border-subtle bg-surface-well hover:border-hover text-xs sm:text-sm font-medium text-muted hover:text-primary transition-colors cursor-pointer"
             >
               {copiedLink ? (
                 <>
-                  <Check className="w-4 h-4 text-emerald-400" />
-                  <span className="text-emerald-400">Copied!</span>
+                  <Check className="w-4 h-4 text-status-success" />
+                  <span className="text-status-success">Copied!</span>
                 </>
               ) : (
                 <>
@@ -401,10 +401,10 @@ export const FormatSelector: React.FC<FormatSelectorProps> = ({
             <button
               type="button"
               onClick={onOpenAdvancedOptions}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-xl border border-[#1E293B] bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white text-xs sm:text-sm font-medium transition-colors"
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-3.5 rounded-xl border border-subtle bg-surface-well hover:border-hover text-muted hover:text-primary text-xs sm:text-sm font-medium transition-colors cursor-pointer"
               aria-label="More options"
             >
-              <Plus className="w-4 h-4 text-indigo-400" />
+              <Plus className="w-4 h-4 text-accent" />
               <span>More Options</span>
             </button>
           </div>

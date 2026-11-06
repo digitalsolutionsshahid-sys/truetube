@@ -19,17 +19,17 @@ export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
   if (toasts.length === 0) return null;
 
   const icons = {
-    success: <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />,
-    error: <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />,
+    success: <CheckCircle className="w-4 h-4 text-status-success flex-shrink-0" />,
+    error: <AlertCircle className="w-4 h-4 text-status-error flex-shrink-0" />,
     warning: <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />,
-    info: <Info className="w-4 h-4 text-indigo-400 flex-shrink-0" />,
+    info: <Info className="w-4 h-4 text-accent flex-shrink-0" />,
   };
 
   const borders = {
-    success: 'border-emerald-500/30 bg-[#0D161F]',
-    error: 'border-rose-500/30 bg-[#1A0F14]',
+    success: 'border-status-success/30 bg-[#0D161F]',
+    error: 'border-status-error/30 bg-[#1A0F14]',
     warning: 'border-amber-500/30 bg-[#1A160F]',
-    info: 'border-indigo-500/30 bg-[#0D111D]',
+    info: 'border-accent/30 bg-[#0D111D]',
   };
 
   return (
@@ -41,22 +41,22 @@ export const ToastContainer: React.FC<ToastProps> = ({ toasts, onDismiss }) => {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`pointer-events-auto flex items-start gap-3 p-3.5 rounded-2xl border shadow-2xl backdrop-blur-xl animate-fadeIn transition-all ${
+          className={`pointer-events-auto flex items-start gap-3 p-3.5 rounded-2xl border shadow-2xl backdrop-blur-xl animate-fadeIn transition-opacity transition-transform ${
             borders[toast.type]
           }`}
           role="status"
         >
           <div className="mt-0.5">{icons[toast.type]}</div>
           <div className="flex-1 min-w-0">
-            <h5 className="text-xs sm:text-sm font-semibold text-white truncate">{toast.title}</h5>
+            <h5 className="text-xs sm:text-sm font-semibold text-primary truncate">{toast.title}</h5>
             {toast.message && (
-              <p className="text-xs text-slate-400 mt-0.5 line-clamp-2">{toast.message}</p>
+              <p className="text-xs text-muted mt-0.5 line-clamp-2">{toast.message}</p>
             )}
           </div>
           <button
             type="button"
             onClick={() => onDismiss(toast.id)}
-            className="p-1 rounded-lg text-slate-500 hover:text-white transition-colors flex-shrink-0"
+            className="p-1 rounded-lg text-faint hover:text-primary transition-colors flex-shrink-0"
             aria-label="Dismiss notification"
           >
             <X className="w-3.5 h-3.5" />
